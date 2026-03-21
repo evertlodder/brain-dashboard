@@ -29,8 +29,40 @@ const CAT = {
   idea:     { color: '#7c3aed', bg: '#ede9fe', border: '#ddd6fe' },
 };
 
-const today = new Date(); today.setHours(0,0,0,0);
+// Map MCP 'type' values to display categories
+const TYPE_TO_CAT = {
+  observation:  'projects',
+  task:         'projects',
+  decision:     'projects',
+  reference:    'projects',
+  person_note:  'people',
+  idea:         'idea',
+  admin:        'admin',
+};
 
+// Keyword-based fallback classification
+function classifyByContent(content) {
+  const c = content.toLowerCase();
+  if (/farm manager|naam is |persoon die de/.test(c)) return 'people';
+  if (/idee voor later|phase 6 idee|phase 6 roadmap|kyndryl/.test(c)) return 'idea';
+  if (/solaris|lifepo4calculator|affiliate|amazon associates|cloudflare|github|greenspark|bilashaka|fontana|kisima|florensis|selecta|gsc |seo /.test(c)) return 'projects';
+  return null;
+}
+
+function getCategory(t) {
+  const meta = t.metadata || {};
+  // 1. Explicit category field (Telegram captures)
+  if (meta.category) return meta.category;
+  // 2. MCP 'type' field mapped to category
+  if (meta.type && TYPE_TO_CAT[meta.type]) return TYPE_TO_CAT[meta.type];
+  // 3. Keyword fallback
+  const kw = classifyByContent(t.content || '');
+  if (kw) return kw;
+  // 4. Default
+  return 'admin';
+}
+
+const today = new Date(); today.setHours(0,0,0,0);
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day:'numeric', month:'short' }) : null;
 const isToday  = (d) => { if (!d) return false; const dd = new Date(d); dd.setHours(0,0,0,0); return dd.getTime() === today.getTime(); };
 const isOverdue = (d) => { if (!d) return false; const dd = new Date(d); dd.setHours(0,0,0,0); return dd < today; };
@@ -40,7 +72,7 @@ async function fetchThoughts() {
     `${SUPABASE_URL}/rest/v1/thoughts?select=id,content,metadata,created_at&order=created_at.desc&limit=100`,
     { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
   );
-  if (!res.ok) throw new Error(`${res.status} — check Supabase RLS settings`);
+  if (!res.ok) throw new Error(`${res.status} — check Supabase RLS`);
   return res.json();
 }
 
@@ -53,16 +85,17 @@ function Chip({ cat }) {
       background: c.bg, color: c.color,
       border: `1px solid ${c.border}`,
       fontFamily: 'DM Mono, monospace', textTransform: 'uppercase'
-    }}>{cat || 'admin'}</span>
+    }}>{cat}</span>
   );
 }
 
 function ThoughtCard({ t, onDismiss }) {
   const meta = t.metadata || {};
-  const cat = meta.category || 'admin';
+  const cat = getCategory(t);
   const nudge = meta.nudge_date || meta.due_date;
   const overdue = isOverdue(nudge);
   const todayFlag = isToday(nudge);
+  const source = meta.source || (meta.type ? 'brain' : null);
 
   return (
     <div style={{
@@ -85,6 +118,9 @@ function ThoughtCard({ t, onDismiss }) {
         </div>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
           <Chip cat={cat} />
+          {source && (
+            <span style={{ fontSize: 9, color: '#adb5bd', fontFamily: 'DM Mono', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{source}</span>
+          )}
           {overdue && (
             <span style={{ fontSize: 10, color: '#dc2626', background: '#fee2e2', border: '1px solid #fecaca', padding: '2px 7px', borderRadius: 4, fontFamily: 'DM Mono', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               overdue · {fmtDate(nudge)}
@@ -107,10 +143,7 @@ function ThoughtCard({ t, onDismiss }) {
 
 function StatBox({ label, value, color }) {
   return (
-    <div style={{
-      background: '#fff', border: '1px solid #e9ecef',
-      borderRadius: 8, padding: '16px 20px'
-    }}>
+    <div style={{ background: '#fff', border: '1px solid #e9ecef', borderRadius: 8, padding: '16px 20px' }}>
       <div style={{ fontSize: 28, fontWeight: 600, color: color || '#212529', lineHeight: 1 }}>{value}</div>
       <div style={{ fontSize: 11, color: '#6c757d', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'DM Mono' }}>{label}</div>
     </div>
@@ -134,22 +167,28 @@ function App() {
   const visible = thoughts.filter(t => !dismissed.has(t.id));
   const dismiss = id => setDismissed(p => new Set([...p, id]));
 
-  const todayItems   = visible.filter(t => isToday(t.metadata?.nudge_date || t.metadata?.due_date));
-  const overdueItems = visible.filter(t => isOverdue(t.metadata?.nudge_date || t.metadata?.due_date));
+  const todayItems   = visible.filter(t => { const m = t.metadata||{}; return isToday(m.nudge_date||m.due_date); });
+  const overdueItems = visible.filter(t => { const m = t.metadata||{}; return isOverdue(m.nudge_date||m.due_date); });
   const recentItems  = visible.slice(0, 40);
-  const filteredInbox = filter === 'all' ? recentItems : recentItems.filter(t => (t.metadata?.category || 'admin') === filter);
+
+  // Category counts
+  const catCounts = ['projects','people','idea','admin'].reduce((acc, c) => {
+    acc[c] = recentItems.filter(t => getCategory(t) === c).length;
+    return acc;
+  }, {});
+
+  const filteredInbox = filter === 'all' ? recentItems : recentItems.filter(t => getCategory(t) === filter);
 
   const navBtn = (id, label) => (
     <button onClick={() => setView(id)} style={{
-      background: view === id ? '#e9ecef' : 'none',
-      border: 'none', cursor: 'pointer',
+      background: view === id ? '#e9ecef' : 'none', border: 'none', cursor: 'pointer',
       color: view === id ? '#212529' : '#6c757d',
       fontFamily: 'DM Sans, sans-serif', fontSize: 13, fontWeight: view === id ? 600 : 400,
       padding: '6px 14px', borderRadius: 6
     }}>{label}</button>
   );
 
-  const filterBtn = (id, label) => (
+  const filterBtn = (id, label, count) => (
     <button onClick={() => setFilter(id)} style={{
       background: filter === id ? (CAT[id]?.bg || '#e9ecef') : '#fff',
       border: `1px solid ${filter === id ? (CAT[id]?.border || '#ced4da') : '#dee2e6'}`,
@@ -157,18 +196,17 @@ function App() {
       color: filter === id ? (CAT[id]?.color || '#212529') : '#6c757d',
       fontFamily: 'DM Mono, monospace', fontSize: 10,
       letterSpacing: '0.06em', textTransform: 'uppercase',
-      padding: '4px 12px', borderRadius: 20, fontWeight: 500
-    }}>{label}</button>
+      padding: '4px 12px', borderRadius: 20, fontWeight: 500,
+      display: 'flex', alignItems: 'center', gap: 5
+    }}>
+      {label}
+      {count !== undefined && <span style={{ fontSize: 9, opacity: 0.7 }}>({count})</span>}
+    </button>
   );
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8f9fa' }}>
-      {/* Header */}
-      <div style={{
-        background: '#fff', borderBottom: '1px solid #e9ecef',
-        padding: '0 24px', height: 54,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-      }}>
+      <div style={{ background: '#fff', borderBottom: '1px solid #e9ecef', padding: '0 24px', height: 54, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontSize: 18, fontWeight: 700, color: '#212529', letterSpacing: '-0.03em' }}>Brain</span>
           <span style={{ fontSize: 11, color: '#adb5bd', letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: 'DM Mono' }}>dashboard</span>
@@ -182,9 +220,7 @@ function App() {
         </div>
       </div>
 
-      {/* Content */}
       <div style={{ maxWidth: 800, margin: '0 auto', padding: '24px 20px' }}>
-
         {loading && <div style={{ textAlign: 'center', color: '#adb5bd', marginTop: 60, fontSize: 13 }}>Loading thoughts…</div>}
         {error   && <div style={{ textAlign: 'center', color: '#dc2626', marginTop: 60, fontSize: 13 }}>Error: {error}</div>}
 
@@ -195,14 +231,12 @@ function App() {
               <StatBox label="Overdue"    value={overdueItems.length} color={overdueItems.length > 0 ? '#dc2626' : '#adb5bd'} />
               <StatBox label="In brain"   value={visible.length}      color="#6c757d" />
             </div>
-
             {overdueItems.length > 0 && (
               <div style={{ marginBottom: 28 }}>
                 <div style={{ fontSize: 11, fontWeight: 600, color: '#dc2626', letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: 'DM Mono', marginBottom: 10 }}>⚠ Overdue</div>
                 {overdueItems.map(t => <ThoughtCard key={t.id} t={t} onDismiss={dismiss} />)}
               </div>
             )}
-
             <div>
               <div style={{ fontSize: 11, fontWeight: 600, color: '#6c757d', letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: 'DM Mono', marginBottom: 10 }}>Today's nudges</div>
               {todayItems.length === 0
@@ -216,7 +250,11 @@ function App() {
         {!loading && !error && view === 'inbox' && (
           <div>
             <div style={{ display: 'flex', gap: 6, marginBottom: 18, flexWrap: 'wrap' }}>
-              {['all','projects','people','admin','idea'].map(f => filterBtn(f, f))}
+              {filterBtn('all', 'all', recentItems.length)}
+              {filterBtn('projects', 'projects', catCounts.projects)}
+              {filterBtn('people', 'people', catCounts.people)}
+              {filterBtn('admin', 'admin', catCounts.admin)}
+              {filterBtn('idea', 'idea', catCounts.idea)}
             </div>
             {filteredInbox.length === 0
               ? <div style={{ color: '#adb5bd', fontSize: 13 }}>Nothing here.</div>
