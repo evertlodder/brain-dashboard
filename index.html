@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LiTime Inventory</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0e14;--surface:#111620;--border:#1e2635;--border-bright:#2e3d55;--accent:#00c5ff;--accent-dim:rgba(0,197,255,0.12);--green:#00e5a0;--green-dim:rgba(0,229,160,0.12);--red:#ff4d6a;--red-dim:rgba(255,77,106,0.12);--text:#e2e8f4;--muted:#5a6a85}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:Sora,sans-serif;min-height:100vh}
+body::before{content:"";position:fixed;inset:0;background-image:linear-gradient(rgba(0,197,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,197,255,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+.header{position:sticky;top:0;z-index:100;background:rgba(10,14,20,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:60px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.1rem}
+.logo span{color:var(--accent)}
+.badge{font-family:DM Mono,monospace;font-size:0.7rem;background:var(--accent-dim);color:var(--accent);border:1px solid rgba(0,197,255,0.3);padding:2px 8px;border-radius:4px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.main{position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:2.5rem 2rem 4rem}
+h1{font-size:1.8rem;font-weight:700;letter-spacing:-0.03em;margin-bottom:6px}
+h1 span{color:var(--accent)}
+.sub{font-size:0.85rem;color:var(--muted);margin-bottom:2rem}
+.stats{display:flex;gap:1px;background:var(--border);border-radius:10px;overflow:hidden;margin-bottom:1.5rem;border:1px solid var(--border)}
+.stat{flex:1;background:var(--surface);padding:1rem 1.2rem}
+.stat-label{font-family:DM Mono,monospace;font-size:0.65rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase}
+.stat-value{font-size:1.5rem;font-weight:700;margin-top:2px}
+.green{color:var(--green)}.red{color:var(--red)}.accent{color:var(--accent)}
+.controls{display:flex;gap:.75rem;margin-bottom:1.5rem;flex-wrap:wrap}
+.sw{position:relative;flex:1;min-width:200px}
+.sw svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted)}
+.si{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:8px 10px 8px 34px;border-radius:7px;font-family:Sora,sans-serif;font-size:0.82rem;outline:none}
+.si:focus{border-color:var(--accent)}.si::placeholder{color:var(--muted)}
+select{background:var(--surface);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:7px;font-family:Sora,sans-serif;font-size:0.82rem;outline:none;cursor:pointer}
+select:focus{border-color:var(--accent)}
+.tw{border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--surface)}
+table{width:100%;border-collapse:collapse;font-size:0.82rem}
+thead tr{background:rgba(0,197,255,0.04);border-bottom:1px solid var(--border)}
+th{padding:10px 14px;text-align:left;font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);font-weight:400;white-space:nowrap}
+tbody tr{border-bottom:1px solid var(--border);transition:background .15s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:rgba(255,255,255,0.02)}
+td{padding:10px 14px;vertical-align:middle}
+.pn{font-weight:500;max-width:260px;line-height:1.3}
+.pn small{display:block;font-family:DM Mono,monospace;font-size:0.65rem;color:var(--muted);margin-top:2px}
+.cb{display:inline-block;font-family:DM Mono,monospace;font-size:0.6rem;padding:2px 6px;border-radius:4px;background:var(--border);color:var(--muted)}
+.at{display:flex;gap:4px}
+.ab{padding:4px 10px;border-radius:5px;border:1px solid var(--border);background:transparent;font-family:DM Mono,monospace;font-size:0.68rem;cursor:pointer;color:var(--muted);transition:all .15s;font-weight:500}
+.ab:hover{border-color:#3a4a60;color:var(--text)}
+.aj{background:var(--green-dim);border-color:var(--green);color:var(--green)}
+.an{background:var(--red-dim);border-color:var(--red);color:var(--red)}
+.di{background:var(--bg);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:6px;font-family:DM Mono,monospace;font-size:0.72rem;outline:none;width:130px}
+.di:focus{border-color:var(--accent)}.di:disabled{opacity:0.3;cursor:not-allowed}
+.ni{background:var(--bg);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:6px;font-family:Sora,sans-serif;font-size:0.75rem;outline:none;width:180px;resize:none;height:34px}
+.ni:focus{border-color:var(--accent)}
+.sb{padding:5px 14px;border-radius:6px;border:1px solid var(--border-bright);background:transparent;color:var(--muted);font-family:DM Mono,monospace;font-size:0.68rem;cursor:pointer;transition:all .15s;white-space:nowrap}
+.sb:hover{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
+.saved{background:var(--green-dim);border-color:var(--green);color:var(--green);pointer-events:none}
+.saving{opacity:0.6;pointer-events:none}
+.serr{background:var(--red-dim);border-color:var(--red);color:var(--red)}
+#toast{position:fixed;bottom:2rem;right:2rem;z-index:999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.ti{background:var(--surface);border:1px solid var(--border-bright);border-radius:8px;padding:10px 16px;font-size:0.78rem;animation:tsin .3s ease;box-shadow:0 8px 24px rgba(0,0,0,0.4)}
+.ts{border-color:var(--green);color:var(--green)}.te{border-color:var(--red);color:var(--red)}
+@keyframes tsin{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}
+.loading{text-align:center;padding:4rem 2rem;color:var(--muted);font-size:0.85rem}
+.spinner{width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:3rem;color:var(--muted);font-size:0.82rem}
+.pag{display:flex;justify-content:center;align-items:center;gap:8px;margin-top:1.5rem;font-size:0.8rem;color:var(--muted);flex-wrap:wrap}
+.pb{background:var(--surface);border:1px solid var(--border);color:var(--text);padding:5px 12px;border-radius:6px;cursor:pointer;font-family:DM Mono,monospace;font-size:0.72rem;transition:all .15s}
+.pb:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+.pb:disabled{opacity:0.3;cursor:not-allowed}
+.pb.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="header">
+  <div class="logo">Li<span>Time</span><div class="badge">INVENTORY MANAGEMENT</div></div>
+  <div style="display:flex;align-items:center;gap:10px;font-size:0.8rem;color:var(--muted)">
+    <div class="dot"></div><span id="sync">Loading...</span>
+  </div>
+</header>
+<main class="main">
+  <h1>Product <span>availability</span></h1>
+  <p class="sub">Update availability, expected date and note per product. Click Save to confirm.</p>
+  <div class="stats">
+    <div class="stat"><div class="stat-label">Total</div><div class="stat-value accent" id="st">--</div></div>
+    <div class="stat"><div class="stat-label">Available</div><div class="stat-value green" id="sj">--</div></div>
+    <div class="stat"><div class="stat-label">Unavailable</div><div class="stat-value red" id="sn">--</div></div>
+    <div class="stat"><div class="stat-label">Saved</div><div class="stat-value accent" id="ss">0</div></div>
+  </div>
+  <div class="controls">
+    <div class="sw">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input class="si" id="search" type="text" placeholder="Search product or SKU...">
+    </div>
+    <select id="fc"><option value="">All categories</option></select>
+    <select id="fa"><option value="">All</option><option value="Ja">Available</option><option value="Nee">Unavailable</option></select>
+  </div>
+  <div class="tw">
+    <div class="loading" id="loading"><div class="spinner"></div>Loading products from Notion...</div>
+    <table id="tbl" style="display:none">
+      <thead><tr><th>Product</th><th>Category</th><th>Available</th><th>Expected date</th><th>Note</th><th></th></tr></thead>
+      <tbody id="tb"></tbody>
+    </table>
+    <div class="empty" id="empty" style="display:none">No products found.</div>
+  </div>
+  <div class="pag" id="pag"></div>
+</main>
+<div id="toast"></div>
+<script>
+const PS = 25;
+let all = [], fil = [], pg = 1, sc = 0;
+
+async function init() {
+  try {
+    const r = await fetch('/api/products');
+    if (r.status === 401) { alert('Unauthorized'); return; }
+    const d = await r.json();
+    if (d.error) { showErr(d.error); return; }
+    all = d;
+    build();
+  } catch(e) { showErr(e.message); }
+}
+
+function build() {
+  const cats = [...new Set(all.map(p => p.category).filter(Boolean))].sort();
+  const sel = document.getElementById('fc');
+  cats.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; sel.appendChild(o); });
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('tbl').style.display = 'table';
+  document.getElementById('sync').textContent = 'Synced ' + new Date().toLocaleTimeString('en-GB');
+  filt();
+}
+
+function stats() {
+  document.getElementById('st').textContent = all.length;
+  document.getElementById('sj').textContent = all.filter(p => p.available === 'Ja').length;
+  document.getElementById('sn').textContent = all.filter(p => p.available === 'Nee').length;
+  document.getElementById('ss').textContent = sc;
+}
+
+function filt() {
+  const q = document.getElementById('search').value.toLowerCase();
+  const cat = document.getElementById('fc').value;
+  const av = document.getElementById('fa').value;
+  fil = all.filter(p =>
+    (!q || p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q)) &&
+    (!cat || p.category === cat) &&
+    (!av || p.available === av)
+  );
+  pg = 1; render(); stats();
+}
+
+function render() {
+  const page = fil.slice((pg-1)*PS, pg*PS);
+  const tb = document.getElementById('tb');
+  if (!page.length) {
+    tb.innerHTML = '';
+    document.getElementById('empty').style.display = 'block';
+  } else {
+    document.getElementById('empty').style.display = 'none';
+    tb.innerHTML = page.map(row).join('');
+  }
+  pager();
+}
+
+function row(p) {
+  const ja = p.available === 'Ja', ne = p.available === 'Nee';
+  return `<tr id="r${p.id}">
+    <td><div class="pn">${esc(p.name)}<small>${esc(p.sku||'--')}</small></div></td>
+    <td><span class="cb">${esc(p.category||'--')}</span></td>
+    <td><div class="at">
+      <button class="ab ${ja?'aj':''}" onclick="sa('${p.id}','Ja')">YES</button>
+      <button class="ab ${ne?'an':''}" onclick="sa('${p.id}','Nee')">NO</button>
+    </div></td>
+    <td><input class="di" type="date" id="d${p.id}" value="${p.date||''}" ${ja?'disabled':''}></td>
+    <td><textarea class="ni" id="n${p.id}" placeholder="Note...">${esc(p.note||'')}</textarea></td>
+    <td><button class="sb" id="b${p.id}" onclick="sv('${p.id}')">Save</button></td>
+  </tr>`;
+}
+
+function sa(id, val) {
+  const p = all.find(x => x.id === id); if (!p) return;
+  p.available = val;
+  const row = document.getElementById('r' + id); if (!row) return;
+  row.querySelectorAll('.ab').forEach(b => {
+    b.classList.remove('aj','an');
+    if (b.textContent === 'YES' && val === 'Ja') b.classList.add('aj');
+    if (b.textContent === 'NO' && val === 'Nee') b.classList.add('an');
+  });
+  const d = document.getElementById('d' + id);
+  if (d) d.disabled = val === 'Ja';
+}
+
+function pager() {
+  const tot = Math.ceil(fil.length/PS);
+  const p = document.getElementById('pag');
+  if (tot <= 1) { p.innerHTML = ''; return; }
+  let h = `<button class="pb" onclick="gp(${pg-1})" ${pg===1?'disabled':''}>prev</button>`;
+  for (let i = 1; i <= tot; i++) h += `<button class="pb ${i===pg?'active':''}" onclick="gp(${i})">${i}</button>`;
+  h += `<button class="pb" onclick="gp(${pg+1})" ${pg===tot?'disabled':''}>next</button>`;
+  h += `<span>${fil.length} products</span>`;
+  p.innerHTML = h;
+}
+
+function gp(n) { pg = n; render(); window.scrollTo({top:0,behavior:'smooth'}); }
+
+async function sv(id) {
+  const p = all.find(x => x.id === id); if (!p) return;
+  const date = document.getElementById('d'+id)?.value || '';
+  const note = document.getElementById('n'+id)?.value || '';
+  p.date = date; p.note = note;
+  const btn = document.getElementById('b'+id);
+  btn.textContent = '...'; btn.className = 'sb saving';
+  try {
+    const r = await fetch('/api/products/'+id, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({available: p.available, date, note})
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    btn.textContent = 'Saved'; btn.className = 'sb saved'; sc++; stats();
+    toast(p.name.substring(0,30) + ' saved', 'ts');
+    setTimeout(() => { btn.textContent = 'Save'; btn.className = 'sb'; }, 3000);
+  } catch(e) {
+    btn.textContent = 'Error'; btn.className = 'sb serr';
+    toast('Failed: ' + e.message, 'te');
+    setTimeout(() => { btn.textContent = 'Save'; btn.className = 'sb'; }, 3000);
+  }
+}
+
+function toast(msg, cls) {
+  const el = document.createElement('div');
+  el.className = 'ti ' + cls; el.textContent = msg;
+  document.getElementById('toast').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+function showErr(msg) {
+  document.getElementById('loading').innerHTML = `<div style="color:var(--red)">Error: ${msg}<br><button onclick="init()" style="margin-top:12px;padding:6px 16px;border-radius:6px;border:1px solid #2e3d55;background:transparent;color:#e2e8f4;cursor:pointer">Retry</button></div>`;
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+document.getElementById('search').addEventListener('input', filt);
+document.getElementById('fc').addEventListener('change', filt);
+document.getElementById('fa').addEventListener('change', filt);
+init();
+</script>
+</body>
+</html>
