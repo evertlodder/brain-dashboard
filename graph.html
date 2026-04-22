@@ -8,105 +8,86 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <style>
-  :root {
-    --bg: #f8fafc;
-    --surface: #ffffff;
-    --border: #e2e8f0;
-    --text: #0f172a;
-    --muted: #94a3b8;
-    --subtle: #f1f5f9;
-    --canvas-bg: #0f172a;
-
-    --thought: #059669;
-    --project: #2563eb;
-    --person:  #dc2626;
-    --idea:    #d97706;
-
-    --edge-spawn: rgba(99,102,241,0.25);
-    --edge-pp:    rgba(245,158,11,0.7);
-    --edge-ip:    rgba(167,139,250,0.7);
-  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+  html, body { height: 100%; font-family: 'DM Sans', sans-serif; background: #f8fafc; color: #0f172a; }
+  body { display: flex; flex-direction: column; }
 
-  /* HEADER */
-  header { display:flex; align-items:center; justify-content:space-between; padding:14px 24px; border-bottom:1px solid var(--border); background:var(--surface); flex-shrink:0; }
+  header { display:flex; align-items:center; justify-content:space-between; padding:12px 20px; border-bottom:1px solid #e2e8f0; background:#fff; flex-shrink:0; }
   .logo { display:flex; align-items:center; gap:10px; }
-  .logo-dot { width:9px; height:9px; border-radius:50%; background:#059669; box-shadow:0 0 6px #059669; animation:pulse 2.4s ease-in-out infinite; }
-  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.75)} }
-  .logo h1 { font-size:16px; font-weight:700; letter-spacing:-0.02em; color:var(--text); }
-  .logo span { font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); }
-  .tabs { display:flex; gap:2px; background:var(--subtle); border-radius:8px; padding:3px; }
-  .tab { padding:6px 18px; border-radius:6px; border:none; cursor:pointer; font-family:'DM Sans',sans-serif; font-size:12px; font-weight:500; background:transparent; color:var(--muted); transition:all .15s; }
-  .tab.active { background:var(--surface); color:var(--text); font-weight:600; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  .logo-dot { width:9px; height:9px; border-radius:50%; background:#16a34a; box-shadow:0 0 6px #16a34a; animation:pulse 2.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.35;transform:scale(0.7)} }
+  .logo h1 { font-size:15px; font-weight:700; letter-spacing:-0.02em; }
+  .logo small { font-family:'DM Mono',monospace; font-size:10px; color:#94a3b8; display:block; }
+  .tabs { display:flex; gap:2px; background:#f1f5f9; border-radius:8px; padding:3px; }
+  .tab { padding:5px 16px; border-radius:6px; border:none; cursor:pointer; font-family:'DM Sans',sans-serif; font-size:12px; font-weight:500; background:transparent; color:#94a3b8; transition:all .15s; }
+  .tab.active { background:#fff; color:#0f172a; font-weight:600; box-shadow:0 1px 3px rgba(0,0,0,.08); }
 
-  /* CONTENT */
-  .content { flex:1; display:flex; flex-direction:column; overflow:hidden; }
-  .panel { display:none; flex:1; flex-direction:column; overflow:hidden; }
+  .content { flex:1; display:flex; flex-direction:column; min-height:0; }
+  .panel { display:none; flex:1; flex-direction:column; min-height:0; }
   .panel.active { display:flex; }
 
   /* GRAPH */
-  .graph-controls { display:flex; gap:7px; align-items:center; flex-wrap:wrap; padding:10px 20px; border-bottom:1px solid var(--border); background:var(--surface); }
-  .filter-label { font-family:'DM Mono',monospace; font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; }
-  .chip { padding:3px 10px; border-radius:20px; border:1.5px solid var(--border); background:transparent; color:var(--muted); font-family:'DM Sans',sans-serif; font-size:11px; font-weight:600; cursor:pointer; transition:all .15s; }
-  .chip:hover { border-color:#cbd5e1; color:var(--text); }
-  .chip.active-all      { border-color:#6366f1; background:#eef2ff; color:#4f46e5; }
-  .chip.active-thought  { border-color:#059669; background:#ecfdf5; color:#059669; }
-  .chip.active-project  { border-color:#2563eb; background:#eff6ff; color:#2563eb; }
-  .chip.active-person   { border-color:#dc2626; background:#fef2f2; color:#dc2626; }
-  .chip.active-idea     { border-color:#d97706; background:#fffbeb; color:#d97706; }
-  .chip.active-spawned_from   { border-color:#6366f1; background:#eef2ff; color:#4f46e5; }
-  .chip.active-project_person { border-color:#d97706; background:#fffbeb; color:#d97706; }
-  .chip.active-idea_project   { border-color:#7c3aed; background:#f5f3ff; color:#7c3aed; }
-  .divider { width:1px; height:16px; background:var(--border); margin:0 3px; }
-  .stat-badge { margin-left:auto; font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); }
+  .graph-controls { display:flex; gap:6px; align-items:center; flex-wrap:wrap; padding:9px 18px; border-bottom:1px solid #e2e8f0; background:#fff; flex-shrink:0; }
+  .flbl { font-family:'DM Mono',monospace; font-size:9px; color:#94a3b8; text-transform:uppercase; letter-spacing:.08em; }
+  .chip { padding:3px 9px; border-radius:20px; border:1.5px solid #e2e8f0; background:transparent; color:#94a3b8; font-family:'DM Sans',sans-serif; font-size:11px; font-weight:600; cursor:pointer; transition:all .15s; }
+  .chip:hover { border-color:#cbd5e1; color:#475569; }
+  .chip.an  { border-color:#6366f1; background:#eef2ff; color:#4338ca; }
+  .chip.at  { border-color:#16a34a; background:#f0fdf4; color:#16a34a; }
+  .chip.apr { border-color:#2563eb; background:#eff6ff; color:#2563eb; }
+  .chip.ape { border-color:#dc2626; background:#fef2f2; color:#dc2626; }
+  .chip.ai  { border-color:#d97706; background:#fffbeb; color:#d97706; }
+  .chip.aef { border-color:#6366f1; background:#eef2ff; color:#4338ca; }
+  .chip.app { border-color:#d97706; background:#fffbeb; color:#d97706; }
+  .chip.aip { border-color:#7c3aed; background:#f5f3ff; color:#7c3aed; }
+  .sep { width:1px; height:14px; background:#e2e8f0; }
+  .sbadge { margin-left:auto; font-family:'DM Mono',monospace; font-size:10px; color:#94a3b8; }
 
-  .graph-wrap { flex:1; position:relative; overflow:hidden; }
-  #graph-svg { width:100%; height:100%; display:block; background:var(--canvas-bg); }
-  #loading { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:'DM Mono',monospace; font-size:11px; color:#475569; background:var(--canvas-bg); }
+  .graph-wrap { flex:1; position:relative; min-height:0; }
+  #graph-svg { position:absolute; inset:0; width:100%; height:100%; background:#0f172a; }
+  #gloading { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:#0f172a; font-family:'DM Mono',monospace; font-size:11px; color:#475569; }
 
-  .graph-legend { position:absolute; bottom:12px; left:14px; display:flex; gap:12px; flex-wrap:wrap; }
-  .leg-item { display:flex; align-items:center; gap:4px; }
-  .leg-dot  { width:7px; height:7px; border-radius:50%; }
-  .leg-lbl  { font-family:'DM Mono',monospace; font-size:9px; color:#64748b; }
+  .glegend { position:absolute; bottom:10px; left:12px; display:flex; gap:10px; flex-wrap:wrap; pointer-events:none; }
+  .gli { display:flex; align-items:center; gap:4px; }
+  .gld { width:7px; height:7px; border-radius:50%; }
+  .gll { font-family:'DM Mono',monospace; font-size:9px; color:#64748b; }
 
   /* TOOLTIP */
-  #tooltip { position:fixed; pointer-events:none; opacity:0; background:rgba(255,255,255,0.97); border:1px solid var(--border); border-radius:10px; padding:11px 14px; min-width:170px; max-width:230px; transition:opacity .15s; z-index:100; box-shadow:0 4px 16px rgba(0,0,0,.1); }
-  #tooltip .t-type  { font-family:'DM Mono',monospace; font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin-bottom:4px; display:flex; align-items:center; gap:6px; }
-  #tooltip .t-dot   { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
-  #tooltip .t-label { font-size:12px; color:var(--text); line-height:1.4; margin-bottom:5px; font-weight:500; }
-  #tooltip .t-meta  { font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); }
+  #tt { position:fixed; pointer-events:none; opacity:0; background:rgba(255,255,255,.97); border:1px solid #e2e8f0; border-radius:9px; padding:10px 13px; min-width:160px; max-width:220px; transition:opacity .12s; z-index:200; box-shadow:0 4px 16px rgba(0,0,0,.1); }
+  #tt .tt-type { font-family:'DM Mono',monospace; font-size:9px; color:#94a3b8; text-transform:uppercase; letter-spacing:.08em; margin-bottom:4px; display:flex; align-items:center; gap:5px; }
+  #tt .tt-dot  { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+  #tt .tt-lbl  { font-size:12px; color:#0f172a; font-weight:500; line-height:1.4; margin-bottom:4px; }
+  #tt .tt-sub  { font-family:'DM Mono',monospace; font-size:10px; color:#94a3b8; }
 
   /* HEALTH */
-  .health-inner { padding:20px 24px; overflow-y:auto; display:flex; flex-direction:column; gap:14px; }
-  .health-header { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 18px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
-  .health-header .lbl { font-family:'DM Mono',monospace; font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin-bottom:3px; }
-  .health-header .val { font-size:12px; color:#475569; }
-  .badges { display:flex; gap:6px; }
-  .badge { display:flex; align-items:center; gap:5px; border-radius:7px; padding:5px 10px; font-size:11px; font-weight:600; }
-  .badge.high   { background:#fef2f2; color:#dc2626; }
-  .badge.medium { background:#fffbeb; color:#d97706; }
-  .badge .bdot  { width:7px; height:7px; border-radius:50%; }
+  #panel-health { overflow-y:auto; }
+  .hi { padding:18px 22px; display:flex; flex-direction:column; gap:14px; }
+  .hh { background:#fff; border:1px solid #e2e8f0; border-radius:11px; padding:13px 16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+  .hh .hl { font-family:'DM Mono',monospace; font-size:9px; color:#94a3b8; text-transform:uppercase; letter-spacing:.08em; margin-bottom:2px; }
+  .hh .hv { font-size:12px; color:#475569; }
+  .bgs { display:flex; gap:5px; }
+  .bg  { display:flex; align-items:center; gap:4px; border-radius:6px; padding:4px 9px; font-size:11px; font-weight:600; }
+  .bg.bgh { background:#fef2f2; color:#dc2626; }
+  .bg.bgm { background:#fffbeb; color:#d97706; }
+  .bg .bd  { width:6px; height:6px; border-radius:50%; }
 
-  .stats-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
-  .stat-card { background:var(--surface); border:1.5px solid var(--border); border-radius:10px; padding:13px 15px; }
-  .stat-card .sc-lbl { font-family:'DM Mono',monospace; font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:5px; }
-  .stat-card .sc-val { font-size:24px; font-weight:700; color:var(--text); line-height:1; }
-  .stat-card .sc-bar { margin-top:7px; height:2px; border-radius:1px; }
+  .sgrid { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; }
+  .sc { background:#fff; border:1.5px solid #e2e8f0; border-radius:9px; padding:12px 14px; }
+  .scl { font-family:'DM Mono',monospace; font-size:9px; color:#94a3b8; text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px; }
+  .scv { font-size:22px; font-weight:700; color:#0f172a; line-height:1; }
+  .scb { margin-top:6px; height:2px; border-radius:1px; }
 
-  .lint-section h3 { font-family:'DM Mono',monospace; font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin-bottom:8px; }
-  .lint-item { border-radius:10px; padding:12px 14px; display:flex; gap:10px; margin-bottom:6px; }
-  .lint-item .li-dot   { width:8px; height:8px; border-radius:50%; flex-shrink:0; margin-top:3px; }
-  .lint-item .li-body  { flex:1; }
-  .lint-item .li-top   { display:flex; justify-content:space-between; align-items:center; margin-bottom:3px; }
-  .lint-item .li-label { font-size:12px; font-weight:600; }
-  .lint-item .li-count { font-family:'DM Mono',monospace; font-size:10px; padding:1px 5px; border-radius:4px; background:rgba(0,0,0,.06); }
-  .lint-item .li-desc  { font-size:11px; opacity:.75; line-height:1.5; }
-  .lint-item.high   { background:#fef2f2; } .lint-item.high   .li-label,.lint-item.high   .li-count,.lint-item.high   .li-desc,.lint-item.high   .li-dot { color:#dc2626; } .lint-item.high   .li-dot { background:#ef4444; color:transparent; }
-  .lint-item.medium { background:#fffbeb; } .lint-item.medium .li-label,.lint-item.medium .li-count,.lint-item.medium .li-desc,.lint-item.medium .li-dot { color:#d97706; } .lint-item.medium .li-dot { background:#f59e0b; color:transparent; }
-  .lint-item.low    { background:#eff6ff; } .lint-item.low    .li-label,.lint-item.low    .li-count,.lint-item.low    .li-desc,.lint-item.low    .li-dot { color:#2563eb; } .lint-item.low    .li-dot { background:#3b82f6; color:transparent; }
-  .lint-item.info   { background:#f0fdf4; } .lint-item.info   .li-label,.lint-item.info   .li-count,.lint-item.info   .li-desc,.lint-item.info   .li-dot { color:#16a34a; } .lint-item.info   .li-dot { background:#22c55e; color:transparent; }
-  .empty-state { font-family:'DM Mono',monospace; font-size:11px; color:var(--muted); text-align:center; padding:40px; }
+  .lsh3 { font-family:'DM Mono',monospace; font-size:9px; color:#94a3b8; text-transform:uppercase; letter-spacing:.08em; margin-bottom:7px; }
+  .li { border-radius:9px; padding:11px 13px; display:flex; gap:9px; margin-bottom:5px; }
+  .lid { width:8px; height:8px; border-radius:50%; flex-shrink:0; margin-top:3px; }
+  .lib { flex:1; }
+  .lit { display:flex; justify-content:space-between; align-items:center; margin-bottom:3px; }
+  .lil { font-size:12px; font-weight:600; }
+  .lic { font-family:'DM Mono',monospace; font-size:10px; padding:1px 5px; border-radius:3px; background:rgba(0,0,0,.06); }
+  .lidc { font-size:11px; opacity:.75; line-height:1.5; }
+  .li.high   { background:#fef2f2; } .li.high   .lil,.li.high   .lic,.li.high   .lidc { color:#dc2626; } .li.high   .lid { background:#ef4444; }
+  .li.medium { background:#fffbeb; } .li.medium .lil,.li.medium .lic,.li.medium .lidc { color:#d97706; } .li.medium .lid { background:#f59e0b; }
+  .li.low    { background:#eff6ff; } .li.low    .lil,.li.low    .lic,.li.low    .lidc { color:#2563eb; } .li.low    .lid { background:#3b82f6; }
+  .li.info   { background:#f0fdf4; } .li.info   .lil,.li.info   .lic,.li.info   .lidc { color:#16a34a; } .li.info   .lid { background:#22c55e; }
 </style>
 </head>
 <body>
@@ -114,263 +95,222 @@
 <header>
   <div class="logo">
     <div class="logo-dot"></div>
-    <div>
-      <h1>Open Brain</h1>
-      <span>fzxpmjvx · graph & health</span>
-    </div>
+    <div><h1>Open Brain</h1><small>fzxpmjvx · graph & health</small></div>
   </div>
   <div class="tabs">
     <button class="tab active" onclick="switchTab('graph')">Graph</button>
-    <button class="tab" onclick="switchTab('health')">Health</button>
+    <button class="tab"        onclick="switchTab('health')">Health</button>
   </div>
 </header>
 
 <div class="content">
-  <!-- GRAPH -->
   <div class="panel active" id="panel-graph">
     <div class="graph-controls">
-      <span class="filter-label">Nodes</span>
-      <button class="chip active-all" data-nf="all"     onclick="setNodeFilter(this)">Alles</button>
-      <button class="chip" data-nf="thought"  onclick="setNodeFilter(this)">Thoughts</button>
-      <button class="chip" data-nf="project"  onclick="setNodeFilter(this)">Projects</button>
-      <button class="chip" data-nf="person"   onclick="setNodeFilter(this)">People</button>
-      <button class="chip" data-nf="idea"     onclick="setNodeFilter(this)">Ideas</button>
-      <div class="divider"></div>
-      <span class="filter-label">Edges</span>
-      <button class="chip active-all" data-ef="all"            onclick="setEdgeFilter(this)">Alle</button>
-      <button class="chip" data-ef="spawned_from"   onclick="setEdgeFilter(this)">spawned→</button>
-      <button class="chip" data-ef="project_person" onclick="setEdgeFilter(this)">project→person</button>
-      <button class="chip" data-ef="idea_project"   onclick="setEdgeFilter(this)">idea→project</button>
-      <span class="stat-badge" id="graph-stats">laden…</span>
+      <span class="flbl">Nodes</span>
+      <button class="chip an"  data-nf="all"     onclick="setNF(this)">Alles</button>
+      <button class="chip"     data-nf="thought" onclick="setNF(this)">Thoughts</button>
+      <button class="chip"     data-nf="project" onclick="setNF(this)">Projects</button>
+      <button class="chip"     data-nf="person"  onclick="setNF(this)">People</button>
+      <button class="chip"     data-nf="idea"    onclick="setNF(this)">Ideas</button>
+      <div class="sep"></div>
+      <span class="flbl">Edges</span>
+      <button class="chip aef" data-ef="all"            onclick="setEF(this)">Alle</button>
+      <button class="chip"     data-ef="spawned_from"   onclick="setEF(this)">spawned→</button>
+      <button class="chip"     data-ef="project_person" onclick="setEF(this)">proj→person</button>
+      <button class="chip"     data-ef="idea_project"   onclick="setEF(this)">idea→proj</button>
+      <span class="sbadge" id="gstat">laden…</span>
     </div>
     <div class="graph-wrap">
-      <div id="loading">kennisgraaf laden…</div>
+      <div id="gloading">kennisgraaf laden…</div>
       <svg id="graph-svg"></svg>
-      <div class="graph-legend">
-        <div class="leg-item"><div class="leg-dot" style="background:#6EE7B7"></div><span class="leg-lbl">thought</span></div>
-        <div class="leg-item"><div class="leg-dot" style="background:#93C5FD"></div><span class="leg-lbl">project</span></div>
-        <div class="leg-item"><div class="leg-dot" style="background:#FCA5A5"></div><span class="leg-lbl">person</span></div>
-        <div class="leg-item"><div class="leg-dot" style="background:#FCD34D"></div><span class="leg-lbl">idea</span></div>
+      <div class="glegend">
+        <div class="gli"><div class="gld" style="background:#6EE7B7"></div><span class="gll">thought</span></div>
+        <div class="gli"><div class="gld" style="background:#93C5FD"></div><span class="gll">project</span></div>
+        <div class="gli"><div class="gld" style="background:#FCA5A5"></div><span class="gll">person</span></div>
+        <div class="gli"><div class="gld" style="background:#FCD34D"></div><span class="gll">idea</span></div>
       </div>
     </div>
   </div>
 
-  <!-- HEALTH -->
   <div class="panel" id="panel-health">
-    <div class="health-inner">
-      <div class="health-header">
-        <div>
-          <div class="lbl">Laatste lint run</div>
-          <div class="val" id="last-run">laden…</div>
-        </div>
-        <div class="badges" id="lint-badges"></div>
+    <div class="hi">
+      <div class="hh">
+        <div><div class="hl">Laatste lint run</div><div class="hv" id="lastrun">laden…</div></div>
+        <div class="bgs" id="lbadges"></div>
       </div>
-      <div class="stats-grid" id="stats-grid"></div>
-      <div class="lint-section">
-        <h3>Bevindingen</h3>
-        <div id="lint-list"><div class="empty-state">laden…</div></div>
-      </div>
+      <div class="sgrid" id="sgrid"></div>
+      <div><div class="lsh3">Bevindingen</div><div id="llist"><div style="color:#94a3b8;font-size:11px;padding:20px 0">laden…</div></div></div>
     </div>
   </div>
 </div>
 
-<div id="tooltip">
-  <div class="t-type"><div class="t-dot" id="t-dot"></div><span id="t-type"></span></div>
-  <div class="t-label" id="t-label"></div>
-  <div class="t-meta"  id="t-meta"></div>
+<div id="tt">
+  <div class="tt-type"><div class="tt-dot" id="ttdot"></div><span id="tttype"></span></div>
+  <div class="tt-lbl" id="ttlbl"></div>
+  <div class="tt-sub" id="ttsub"></div>
 </div>
 
 <script>
-const SB_URL  = 'https://fzxpmjvxmpeutwyakgyg.supabase.co/rest/v1';
-const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ6eHBtanZ4bXBldXR3eWFrZ3lnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2OTAwMDEsImV4cCI6MjA4ODI2NjAwMX0.9rOfzwv6wImlsIrzXaLiZ6ueygAZ4KYYDMtoOtDjPT8';
-const HDR = { apikey: SB_ANON, Authorization: `Bearer ${SB_ANON}` };
+const BASE = 'https://fzxpmjvxmpeutwyakgyg.supabase.co/rest/v1';
+const KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ6eHBtanZ4bXBldXR3eWFrZ3lnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2OTAwMDEsImV4cCI6MjA4ODI2NjAwMX0.9rOfzwv6wImlsIrzXaLiZ6ueygAZ4KYYDMtoOtDjPT8';
+const H    = { apikey: KEY, Authorization: `Bearer ${KEY}` };
 
-const NODE_COLOR = { thought:'#6EE7B7', project:'#93C5FD', person:'#FCA5A5', idea:'#FCD34D' };
-const EDGE_COLOR = { spawned_from:'rgba(99,102,241,0.3)', project_person:'rgba(245,158,11,0.8)', idea_project:'rgba(167,139,250,0.8)' };
-const NODE_R     = { thought:5, project:10, person:8, idea:7 };
+const NC = { thought:'#6EE7B7', project:'#93C5FD', person:'#FCA5A5', idea:'#FCD34D' };
+const EC = { spawned_from:'rgba(99,102,241,.28)', project_person:'rgba(245,158,11,.8)', idea_project:'rgba(167,139,250,.8)' };
+const NR = { thought:5, project:10, person:8, idea:7 };
+const NCLASS = { all:'an', thought:'at', project:'apr', person:'ape', idea:'ai' };
+const ECLASS = { all:'aef', spawned_from:'aef', project_person:'app', idea_project:'aip' };
 
-let ALL_NODES=[], ALL_EDGES=[], nodeFilter='all', edgeFilter='all';
+let AN=[], AE=[], nf='all', ef='all', sim;
 
-async function sb(path, qs='') {
-  const r = await fetch(`${SB_URL}/${path}${qs}`, { headers: HDR });
-  const d = await r.json();
-  return Array.isArray(d) ? d : [];
+async function get(p,q=''){
+  const r=await fetch(`${BASE}/${p}${q}`,{headers:H});
+  const d=await r.json();
+  return Array.isArray(d)?d:[];
+}
+async function cnt(p,q=''){
+  const d=await get(p,`?select=id${q}&limit=5000`);
+  return d.length;
 }
 
-// Use limit-based count (RLS-safe with anon key)
-async function sbCount(path, qs='') {
-  const r = await fetch(`${SB_URL}/${path}?select=id${qs}&limit=10000`, { headers: HDR });
-  const d = await r.json();
-  return Array.isArray(d) ? d.length : 0;
-}
-
-function switchTab(id) {
+function switchTab(id){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('panel-'+id).classList.add('active');
-  document.querySelectorAll('.tab').forEach(t=>{ if(t.textContent.toLowerCase().startsWith(id[0])) t.classList.add('active'); });
-  if(id==='graph') resizeGraph();
-  if(id==='health') loadHealth();
+  event.currentTarget.classList.add('active');
+  if(id==='graph'){setTimeout(resizeG,50);}
+  if(id==='health'){loadH();}
 }
 
-// ── GRAPH ──
-async function loadGraph() {
-  const [projects,people,ideas,rels,derived] = await Promise.all([
-    sb('projects','?select=id,name,status,entity&limit=80'),
-    sb('people','?select=id,name,company&limit=50'),
-    sb('ideas','?select=id,title,status&limit=50'),
-    sb('relations','?select=source_id,source_type,target_id,target_type,relation_type&limit=600'),
-    sb('derived_edges','?select=source_id,source_type,target_id,target_type,edge_type,weight&limit=200'),
+// ── GRAPH ──────────────────────────────────────────────────────────────
+async function loadGraph(){
+  const [pr,pe,id,rl,dv]=await Promise.all([
+    get('projects','?select=id,name,status,entity&limit=80'),
+    get('people','?select=id,name,company&limit=50'),
+    get('ideas','?select=id,title,status&limit=50'),
+    get('relations','?select=source_id,source_type,target_id,target_type,relation_type&limit=600'),
+    get('derived_edges','?select=source_id,source_type,target_id,target_type,edge_type&limit=200'),
   ]);
 
-  const linkedIds = new Set([...rels.map(r=>r.source_id),...rels.map(r=>r.target_id),...derived.map(d=>d.source_id),...derived.map(d=>d.target_id)]);
-  const tIds = [...new Set(rels.filter(r=>r.source_type==='thought').map(r=>r.source_id))].slice(0,80);
-  const thoughts = tIds.length ? await sb('thoughts',`?id=in.(${tIds.join(',')})&select=id,title,category`) : [];
+  const lids=new Set([...rl.map(r=>r.source_id),...rl.map(r=>r.target_id),...dv.map(d=>d.source_id),...dv.map(d=>d.target_id)]);
+  const tids=[...new Set(rl.filter(r=>r.source_type==='thought').map(r=>r.source_id))].slice(0,80);
+  const th=tids.length?await get('thoughts',`?id=in.(${tids.join(',')})&select=id,title,category`):[];
 
-  ALL_NODES = [
-    ...thoughts.map(t=>({id:t.id,type:'thought',label:t.title||'–',sub:t.category})),
-    ...projects.map(p=>({id:p.id,type:'project',label:p.name,sub:p.entity||p.status})),
-    ...people.map(p=>({id:p.id,type:'person',label:p.name,sub:p.company})),
-    ...ideas.map(i=>({id:i.id,type:'idea',label:i.title,sub:i.status})),
-  ].filter(n=>linkedIds.has(n.id)||n.type==='project'||n.type==='person');
+  AN=[
+    ...th.map(t=>({id:t.id,type:'thought',label:t.title||'–',sub:t.category})),
+    ...pr.map(p=>({id:p.id,type:'project',label:p.name,sub:p.entity||p.status})),
+    ...pe.map(p=>({id:p.id,type:'person', label:p.name,sub:p.company})),
+    ...id.map(i=>({id:i.id,type:'idea',  label:i.title,sub:i.status})),
+  ].filter(n=>lids.has(n.id)||n.type==='project'||n.type==='person');
 
-  const nIds = new Set(ALL_NODES.map(n=>n.id));
-  ALL_EDGES = [
-    ...rels.filter(r=>nIds.has(r.source_id)&&nIds.has(r.target_id)).map(r=>({source:r.source_id,target:r.target_id,type:r.relation_type,derived:false})),
-    ...derived.filter(d=>nIds.has(d.source_id)&&nIds.has(d.target_id)).map(d=>({source:d.source_id,target:d.target_id,type:d.edge_type,weight:d.weight,derived:true})),
+  const nids=new Set(AN.map(n=>n.id));
+  AE=[
+    ...rl.filter(r=>nids.has(r.source_id)&&nids.has(r.target_id)).map(r=>({source:r.source_id,target:r.target_id,type:r.relation_type,derived:false})),
+    ...dv.filter(d=>nids.has(d.source_id)&&nids.has(d.target_id)).map(d=>({source:d.source_id,target:d.target_id,type:d.edge_type,derived:true})),
   ];
 
-  document.getElementById('loading').style.display='none';
-  buildGraph();
+  document.getElementById('gloading').style.display='none';
+  buildG();
 }
 
-let W=0,H=0,simulation;
-function buildGraph() {
+function fdata(){
+  const nodes=nf==='all'?AN:AN.filter(n=>n.type===nf);
+  const ids=new Set(nodes.map(n=>n.id));
+  const edges=AE.filter(e=>ids.has(e.source)&&ids.has(e.target)&&(ef==='all'||e.type===ef));
+  return {nodes,edges};
+}
+
+function buildG(){
   const el=document.getElementById('graph-svg');
-  W=el.clientWidth; H=el.clientHeight;
+  const W=el.clientWidth, H=el.clientHeight;
+  if(!W||!H){setTimeout(buildG,100);return;}
   d3.select(el).selectAll('*').remove();
 
-  const nodes=nodeFilter==='all'?ALL_NODES:ALL_NODES.filter(n=>n.type===nodeFilter);
-  const ids=new Set(nodes.map(n=>n.id));
-  const edges=ALL_EDGES.filter(e=>ids.has(e.source)&&ids.has(e.target)&&(edgeFilter==='all'||e.type===edgeFilter));
-  document.getElementById('graph-stats').textContent=`${nodes.length} nodes · ${edges.length} edges`;
+  const {nodes,edges}=fdata();
+  document.getElementById('gstat').textContent=`${nodes.length} nodes · ${edges.length} edges`;
 
-  const svg=d3.select(el).attr('width',W).attr('height',H)
-    .call(d3.zoom().scaleExtent([0.2,5]).on('zoom',e=>g.attr('transform',e.transform)));
+  const svg=d3.select(el).call(d3.zoom().scaleExtent([0.15,6]).on('zoom',e=>g.attr('transform',e.transform)));
   const g=svg.append('g');
 
-  svg.append('defs').append('marker').attr('id','arr').attr('viewBox','0 -3 6 6').attr('refX',6).attr('refY',0).attr('markerWidth',4).attr('markerHeight',4).attr('orient','auto')
+  svg.append('defs').append('marker').attr('id','arr').attr('viewBox','0 -3 6 6').attr('refX',6).attr('markerWidth',4).attr('markerHeight',4).attr('orient','auto')
     .append('path').attr('d','M0,-3L6,0L0,3').attr('fill','#334155');
 
-  simulation=d3.forceSimulation(nodes)
-    .force('link',d3.forceLink(edges).id(d=>d.id).distance(d=>d.derived?110:70).strength(0.4))
-    .force('charge',d3.forceManyBody().strength(-180))
+  sim=d3.forceSimulation(nodes)
+    .force('link',d3.forceLink(edges).id(d=>d.id).distance(d=>d.derived?115:72).strength(0.4))
+    .force('charge',d3.forceManyBody().strength(-200))
     .force('center',d3.forceCenter(W/2,H/2))
-    .force('collision',d3.forceCollide().radius(d=>NODE_R[d.type]+8));
+    .force('collision',d3.forceCollide().radius(d=>(NR[d.type]||5)+9));
 
   const link=g.append('g').selectAll('line').data(edges).join('line')
-    .attr('stroke',d=>EDGE_COLOR[d.type]||'rgba(99,102,241,0.25)')
+    .attr('stroke',d=>EC[d.type]||'rgba(99,102,241,.25)')
     .attr('stroke-width',d=>d.derived?1.5:0.8)
     .attr('stroke-dasharray',d=>d.derived?'4 3':null)
     .attr('marker-end','url(#arr)');
 
   const node=g.append('g').selectAll('g').data(nodes).join('g').attr('cursor','pointer')
     .call(d3.drag()
-      .on('start',(e,d)=>{if(!e.active)simulation.alphaTarget(0.3).restart();d.fx=d.x;d.fy=d.y;})
+      .on('start',(e,d)=>{if(!e.active)sim.alphaTarget(0.3).restart();d.fx=d.x;d.fy=d.y;})
       .on('drag', (e,d)=>{d.fx=e.x;d.fy=e.y;})
-      .on('end',  (e,d)=>{if(!e.active)simulation.alphaTarget(0);d.fx=null;d.fy=null;}))
+      .on('end',  (e,d)=>{if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null;}))
     .on('mouseover',showTT).on('mousemove',moveTT).on('mouseout',hideTT);
 
-  node.append('circle').attr('r',d=>NODE_R[d.type]||5).attr('fill',d=>NODE_COLOR[d.type]||'#94a3b8')
-    .attr('fill-opacity',0.9).attr('stroke','#0f172a').attr('stroke-width',1.5);
+  node.append('circle')
+    .attr('r',d=>NR[d.type]||5)
+    .attr('fill',d=>NC[d.type]||'#94a3b8')
+    .attr('fill-opacity',.88)
+    .attr('stroke','#0f172a')
+    .attr('stroke-width',1.5);
 
   node.filter(d=>d.type==='project'||d.type==='person').append('text')
-    .attr('dy',d=>-(NODE_R[d.type]||5)-5).attr('text-anchor','middle')
+    .attr('dy',d=>-(NR[d.type]||5)-5).attr('text-anchor','middle')
     .attr('fill','#94a3b8').attr('font-size',9).attr('font-family','DM Sans,sans-serif')
-    .attr('pointer-events','none').attr('user-select','none')
-    .text(d=>(d.label||'').length>22?d.label.slice(0,22)+'…':d.label);
+    .attr('pointer-events','none')
+    .text(d=>(d.label||'').length>24?d.label.slice(0,24)+'…':d.label);
 
-  simulation.on('tick',()=>{
+  sim.on('tick',()=>{
     link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
     node.attr('transform',d=>`translate(${d.x},${d.y})`);
   });
 }
 
-function resizeGraph(){
-  const el=document.getElementById('graph-svg');
-  if(el.clientWidth!==W||el.clientHeight!==H){W=el.clientWidth;H=el.clientHeight;if(ALL_NODES.length)buildGraph();}
-}
-window.addEventListener('resize',resizeGraph);
+function resizeG(){if(AN.length)buildG();}
+window.addEventListener('resize',resizeG);
 
-function setNodeFilter(btn){
-  nodeFilter=btn.dataset.nf;
-  document.querySelectorAll('[data-nf]').forEach(b=>b.className='chip'+(b===btn?` active-${nodeFilter}`:''));
-  if(ALL_NODES.length)buildGraph();
+function setNF(btn){
+  nf=btn.dataset.nf;
+  document.querySelectorAll('[data-nf]').forEach(b=>{b.className='chip'+(b===btn?' '+(NCLASS[nf]||'an'):'');});
+  if(AN.length)buildG();
 }
-function setEdgeFilter(btn){
-  edgeFilter=btn.dataset.ef;
-  document.querySelectorAll('[data-ef]').forEach(b=>b.className='chip'+(b===btn?` active-${edgeFilter}`:''));
-  if(ALL_NODES.length)buildGraph();
+function setEF(btn){
+  ef=btn.dataset.ef;
+  document.querySelectorAll('[data-ef]').forEach(b=>{b.className='chip'+(b===btn?' '+(ECLASS[ef]||'aef'):'');});
+  if(AN.length)buildG();
 }
 
-const tt=document.getElementById('tooltip');
-function showTT(e,d){
-  document.getElementById('t-dot').style.background=NODE_COLOR[d.type]||'#94a3b8';
-  document.getElementById('t-type').textContent=d.type;
-  document.getElementById('t-label').textContent=d.label;
-  document.getElementById('t-meta').textContent=d.sub||'';
-  tt.style.opacity=1; moveTT(e);
-}
-function moveTT(e){tt.style.left=(e.clientX+14)+'px';tt.style.top=(e.clientY-10)+'px';}
-function hideTT(){tt.style.opacity=0;}
+const ttEl=document.getElementById('tt');
+function showTT(e,d){document.getElementById('ttdot').style.background=NC[d.type]||'#94a3b8';document.getElementById('tttype').textContent=d.type;document.getElementById('ttlbl').textContent=d.label;document.getElementById('ttsub').textContent=d.sub||'';ttEl.style.opacity=1;moveTT(e);}
+function moveTT(e){ttEl.style.left=(e.clientX+14)+'px';ttEl.style.top=(e.clientY-10)+'px';}
+function hideTT(){ttEl.style.opacity=0;}
 
-// ── HEALTH ──
-let healthLoaded=false;
-async function loadHealth(){
-  if(healthLoaded)return;
-  healthLoaded=true;
-
-  const [lintRows,tc,pc,pec,ic,rc,dc]=await Promise.all([
-    sb('brain_lint_results','?order=run_at.desc&limit=30'),
-    sbCount('thoughts'),
-    sbCount('projects'),
-    sbCount('people'),
-    sbCount('ideas'),
-    sbCount('relations'),
-    sbCount('derived_edges'),
+// ── HEALTH ─────────────────────────────────────────────────────────────
+let hl=false;
+async function loadH(){
+  if(hl)return; hl=true;
+  const [lr,tc,pc,pec,ic,rc,dc]=await Promise.all([
+    get('brain_lint_results','?order=run_at.desc&limit=30'),
+    cnt('thoughts'),cnt('projects'),cnt('people'),cnt('ideas'),cnt('relations'),cnt('derived_edges'),
   ]);
+  document.getElementById('sgrid').innerHTML=[['Thoughts',tc,'#16a34a'],['Projects',pc,'#2563eb'],['People',pec,'#dc2626'],['Ideas',ic,'#d97706'],['Relaties',rc,'#7c3aed'],['Derived',dc,'#f59e0b']]
+    .map(([l,v,c])=>`<div class="sc"><div class="scl">${l}</div><div class="scv">${v.toLocaleString('nl-NL')}</div><div class="scb" style="background:${c}"></div></div>`).join('');
 
-  const STATS=[['Thoughts',tc,'#059669'],['Projects',pc,'#2563eb'],['People',pec,'#dc2626'],['Ideas',ic,'#d97706'],['Relaties',rc,'#7c3aed'],['Derived',dc,'#f59e0b']];
-  document.getElementById('stats-grid').innerHTML=STATS.map(([l,v,c])=>`
-    <div class="stat-card">
-      <div class="sc-lbl">${l}</div>
-      <div class="sc-val">${v.toLocaleString('nl-NL')}</div>
-      <div class="sc-bar" style="background:${c}"></div>
-    </div>`).join('');
+  if(!lr.length){document.getElementById('lastrun').textContent='Nog geen run';return;}
+  const lat=lr[0].run_at;
+  const items=lr.filter(l=>l.run_at===lat).sort((a,b)=>({high:0,medium:1,low:2,info:3}[a.severity]-{high:0,medium:1,low:2,info:3}[b.severity]));
+  document.getElementById('lastrun').textContent=new Date(lat).toLocaleString('nl-NL');
 
-  if(!lintRows.length){document.getElementById('last-run').textContent='Nog geen run';return;}
-  const latest=lintRows[0].run_at;
-  const items=lintRows.filter(l=>l.run_at===latest).sort((a,b)=>({high:0,medium:1,low:2,info:3}[a.severity]-{high:0,medium:1,low:2,info:3}[b.severity]));
-  document.getElementById('last-run').textContent=new Date(latest).toLocaleString('nl-NL');
-
-  const high=items.filter(i=>i.severity==='high').length;
-  const med=items.filter(i=>i.severity==='medium').length;
-  let badges='';
-  if(high) badges+=`<div class="badge high"><div class="bdot" style="background:#ef4444"></div>${high} hoog</div>`;
-  if(med)  badges+=`<div class="badge medium"><div class="bdot" style="background:#f59e0b"></div>${med} medium</div>`;
-  document.getElementById('lint-badges').innerHTML=badges;
-
-  document.getElementById('lint-list').innerHTML=items.map(item=>`
-    <div class="lint-item ${item.severity}">
-      <div class="li-dot"></div>
-      <div class="li-body">
-        <div class="li-top">
-          <span class="li-label">${item.label}</span>
-          <span class="li-count">${(item.count||0).toLocaleString('nl-NL')}</span>
-        </div>
-        <div class="li-desc">${item.description||''}</div>
-      </div>
-    </div>`).join('');
+  const hi=items.filter(i=>i.severity==='high').length, mi=items.filter(i=>i.severity==='medium').length;
+  document.getElementById('lbadges').innerHTML=(hi?`<div class="bg bgh"><div class="bd" style="background:#ef4444"></div>${hi} hoog</div>`:'')+(mi?`<div class="bg bgm"><div class="bd" style="background:#f59e0b"></div>${mi} medium</div>`:'');
+  document.getElementById('llist').innerHTML=items.map(i=>`<div class="li ${i.severity}"><div class="lid"></div><div class="lib"><div class="lit"><span class="lil">${i.label}</span><span class="lic">${(i.count||0).toLocaleString('nl-NL')}</span></div><div class="lidc">${i.description||''}</div></div></div>`).join('');
 }
 
 loadGraph();
