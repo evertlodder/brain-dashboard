@@ -177,17 +177,27 @@ header{display:flex;align-items:center;justify-content:space-between;padding:10p
 const SB  = 'https://fzxpmjvxmpeutwyakgyg.supabase.co';
 const KEY = window.SB_KEY || 'sb_publishable_VhBbcWVfAEwbndKUfoZYNg_LmBbQqj0';
 
+// Paginated fetch: lost PostgREST 1000-row cap op door te paginen met offset/limit
 async function sbGet(table, qs=''){
   const sep = qs.includes('?') ? '&' : '?';
-  const r = await fetch(`${SB}/rest/v1/${table}${qs}${sep}apikey=${KEY}`, {
-    headers: { 'Range-Unit': 'items', 'Range': '0-9999' }
-  });
-  if(!r.ok) return [];
-  const d = await r.json();
-  return Array.isArray(d) ? d : [];
+  const PAGE = 1000;
+  let all = [];
+  let offset = 0;
+  while(true){
+    const extra = `${sep}apikey=${KEY}&offset=${offset}&limit=${PAGE}`;
+    const r = await fetch(`${SB}/rest/v1/${table}${qs}${extra}`);
+    if(!r.ok) break;
+    const d = await r.json();
+    if(!Array.isArray(d) || d.length === 0) break;
+    all = all.concat(d);
+    if(d.length < PAGE) break;
+    offset += PAGE;
+    if(offset > 20000) break; // hard safety cap
+  }
+  return all;
 }
 async function sbCnt(table, qs=''){
-  const d = await sbGet(table, `?select=id${qs}&limit=5000`);
+  const d = await sbGet(table, `?select=id${qs}`);
   return d.length;
 }
 
@@ -209,11 +219,11 @@ function sw(id,btn){
 
 async function loadGraph(){
   const [pr,pe,id,rl,dv]=await Promise.all([
-    sbGet('projects','?select=id,name,status,entity&limit=300'),
-    sbGet('people',  '?select=id,name,company,role&limit=200'),
-    sbGet('ideas',   '?select=id,title,status,category&limit=200'),
-    sbGet('relations','?select=source_id,source_type,target_id,target_type,relation_type&limit=3000'),
-    sbGet('derived_edges','?select=source_id,source_type,target_id,target_type,edge_type&limit=1000'),
+    sbGet('projects','?select=id,name,status,entity'),
+    sbGet('people',  '?select=id,name,company,role'),
+    sbGet('ideas',   '?select=id,title,status,category'),
+    sbGet('relations','?select=source_id,source_type,target_id,target_type,relation_type'),
+    sbGet('derived_edges','?select=source_id,source_type,target_id,target_type,edge_type'),
   ]);
   const lids=new Set([...rl.map(r=>r.source_id),...rl.map(r=>r.target_id),...dv.map(d=>d.source_id),...dv.map(d=>d.target_id)]);
   const tids=[...new Set(rl.filter(r=>r.source_type==='thought').map(r=>r.source_id))].slice(0,80);
@@ -256,7 +266,6 @@ function buildG(){
   const g=root.append('g');
   const zoom=d3.zoom().scaleExtent([0.1,10]).on('zoom',e=>g.attr('transform',e.transform));
   root.call(zoom);
-  // Expose zoom + root voor zoomToNode()
   window._zoom=zoom;
   window._svgRoot=root;
   window._svgG=g;
@@ -303,7 +312,6 @@ function sEF(btn){ef=btn.dataset.ef;document.querySelectorAll('[data-ef]').forEa
 function zoomToNode(id){
   const n=nodeById[id];
   if(!n||!window._zoom||!window._svgRoot)return;
-  // Als force-simulation x/y nog niet heeft gezet, wacht kort
   if(typeof n.x!=='number'||typeof n.y!=='number'){
     setTimeout(()=>zoomToNode(id),300);
     return;
@@ -314,7 +322,6 @@ function zoomToNode(id){
   const ty=H/2 - n.y*scale;
   const transform=d3.zoomIdentity.translate(tx,ty).scale(scale);
   window._svgRoot.transition().duration(700).ease(d3.easeCubicOut).call(window._zoom.transform,transform);
-  // Pulse ring op de node
   window._svgG.selectAll('.pulse-ring').remove();
   const circle=window._svgG.select(`circle[data-node-id="${id}"]`);
   if(!circle.empty()){
