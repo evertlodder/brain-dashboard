@@ -205,11 +205,11 @@ function sw(id,btn){
 
 async function loadGraph(){
   const [pr,pe,id,rl,dv]=await Promise.all([
-    sbGet('projects','?select=id,name,status,entity&limit=100'),
-    sbGet('people',  '?select=id,name,company,role&limit=60'),
-    sbGet('ideas',   '?select=id,title,status,category&limit=60'),
-    sbGet('relations','?select=source_id,source_type,target_id,target_type,relation_type&limit=800'),
-    sbGet('derived_edges','?select=source_id,source_type,target_id,target_type,edge_type&limit=300'),
+    sbGet('projects','?select=id,name,status,entity&limit=300'),
+    sbGet('people',  '?select=id,name,company,role&limit=200'),
+    sbGet('ideas',   '?select=id,title,status,category&limit=200'),
+    sbGet('relations','?select=source_id,source_type,target_id,target_type,relation_type&limit=3000'),
+    sbGet('derived_edges','?select=source_id,source_type,target_id,target_type,edge_type&limit=1000'),
   ]);
   const lids=new Set([...rl.map(r=>r.source_id),...rl.map(r=>r.target_id),...dv.map(d=>d.source_id),...dv.map(d=>d.target_id)]);
   const tids=[...new Set(rl.filter(r=>r.source_type==='thought').map(r=>r.source_id))].slice(0,80);
