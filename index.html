@@ -179,7 +179,9 @@ const KEY = window.SB_KEY || 'sb_publishable_VhBbcWVfAEwbndKUfoZYNg_LmBbQqj0';
 
 async function sbGet(table, qs=''){
   const sep = qs.includes('?') ? '&' : '?';
-  const r = await fetch(`${SB}/rest/v1/${table}${qs}${sep}apikey=${KEY}`);
+  const r = await fetch(`${SB}/rest/v1/${table}${qs}${sep}apikey=${KEY}`, {
+    headers: { 'Range-Unit': 'items', 'Range': '0-9999' }
+  });
   if(!r.ok) return [];
   const d = await r.json();
   return Array.isArray(d) ? d : [];
