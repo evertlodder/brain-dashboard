@@ -307,7 +307,7 @@ function zoomToNode(id){
     return;
   }
   const W=window._svgW, H=window._svgH;
-  const scale=1.5;
+  const scale=1.2;
   const tx=W/2 - n.x*scale;
   const ty=H/2 - n.y*scale;
   const transform=d3.zoomIdentity.translate(tx,ty).scale(scale);
