@@ -15,6 +15,8 @@ header{display:flex;align-items:center;justify-content:space-between;padding:10p
 .logo{display:flex;align-items:center;gap:8px}
 .dot{width:8px;height:8px;border-radius:50%;background:#16a34a;box-shadow:0 0 5px #16a34a;animation:pu 2.4s ease-in-out infinite;flex-shrink:0}
 @keyframes pu{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.65)}}
+@keyframes pulse-node{0%{r:12;opacity:.9}50%{r:24;opacity:.3}100%{r:12;opacity:0}}
+.pulse-ring{fill:none;stroke:#6366f1;stroke-width:2.5;animation:pulse-node 1.2s ease-out 2}
 .logo h1{font-size:14px;font-weight:700;letter-spacing:-.02em}
 .logo small{font-family:'DM Mono',monospace;font-size:9px;color:#94a3b8}
 .tabs{display:flex;gap:2px;background:#f1f5f9;border-radius:7px;padding:2px;flex-shrink:0}
@@ -250,7 +252,14 @@ function buildG(){
   document.getElementById('gstat').textContent=`${nodes.length} nodes · ${edges.length} edges`;
   const root=d3.select(el);
   const g=root.append('g');
-  root.call(d3.zoom().scaleExtent([0.1,10]).on('zoom',e=>g.attr('transform',e.transform)));
+  const zoom=d3.zoom().scaleExtent([0.1,10]).on('zoom',e=>g.attr('transform',e.transform));
+  root.call(zoom);
+  // Expose zoom + root voor zoomToNode()
+  window._zoom=zoom;
+  window._svgRoot=root;
+  window._svgG=g;
+  window._svgW=W;
+  window._svgH=H;
   root.append('defs').append('marker').attr('id','arr').attr('viewBox','0 -3 6 6').attr('refX',7).attr('markerWidth',4).attr('markerHeight',4).attr('orient','auto')
     .append('path').attr('d','M0,-3L6,0L0,3').attr('fill','#64748b');
   sim=d3.forceSimulation(nodes)
@@ -268,9 +277,10 @@ function buildG(){
       .on('start',(e,d)=>{if(!e.active)sim.alphaTarget(.3).restart();d.fx=d.x;d.fy=d.y})
       .on('drag', (e,d)=>{d.fx=e.x;d.fy=e.y})
       .on('end',  (e,d)=>{if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null}))
-    .on('click',(e,d)=>{e.stopPropagation();openDetail(d);});
+    .on('click',(e,d)=>{e.stopPropagation();zoomToNode(d.id);openDetail(d);});
   node.append('circle').attr('r',d=>NR[d.type]||5).attr('fill',d=>NC[d.type]||'#94a3b8')
-    .attr('fill-opacity',.9).attr('stroke','#fff').attr('stroke-width',1.5);
+    .attr('fill-opacity',.9).attr('stroke','#fff').attr('stroke-width',1.5)
+    .attr('data-node-id',d=>d.id);
   node.filter(d=>d.type==='project'||d.type==='person').append('text')
     .attr('dy',d=>-(NR[d.type]||5)-5).attr('text-anchor','middle')
     .attr('fill','#475569').attr('font-size',9).attr('font-family','DM Sans,sans-serif')
@@ -280,13 +290,45 @@ function buildG(){
     link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
     node.attr('transform',d=>`translate(${d.x},${d.y})`);
   });
-  d3.select(el).on('click',()=>closeDetail());
+  d3.select(el).on('click',()=>{closeDetail();resetZoom();});
 }
 
 function rG(){if(RAW_NODES.length)buildG();}
 window.addEventListener('resize',rG);
 function sNF(btn){nf=btn.dataset.nf;document.querySelectorAll('[data-nf]').forEach(b=>b.className='chip'+(b===btn?' '+(NCL[nf]||'an'):''));closeDetail();rG();}
 function sEF(btn){ef=btn.dataset.ef;document.querySelectorAll('[data-ef]').forEach(b=>b.className='chip'+(b===btn?' '+(ECL[ef]||'aef'):''));closeDetail();rG();}
+
+function zoomToNode(id){
+  const n=nodeById[id];
+  if(!n||!window._zoom||!window._svgRoot)return;
+  // Als force-simulation x/y nog niet heeft gezet, wacht kort
+  if(typeof n.x!=='number'||typeof n.y!=='number'){
+    setTimeout(()=>zoomToNode(id),300);
+    return;
+  }
+  const W=window._svgW, H=window._svgH;
+  const scale=2.2;
+  const tx=W/2 - n.x*scale;
+  const ty=H/2 - n.y*scale;
+  const transform=d3.zoomIdentity.translate(tx,ty).scale(scale);
+  window._svgRoot.transition().duration(700).ease(d3.easeCubicOut).call(window._zoom.transform,transform);
+  // Pulse ring op de node
+  window._svgG.selectAll('.pulse-ring').remove();
+  const circle=window._svgG.select(`circle[data-node-id="${id}"]`);
+  if(!circle.empty()){
+    const parent=d3.select(circle.node().parentNode);
+    parent.insert('circle',':first-child')
+      .attr('class','pulse-ring')
+      .attr('r',12).attr('cx',0).attr('cy',0);
+    setTimeout(()=>window._svgG.selectAll('.pulse-ring').remove(),2400);
+  }
+}
+
+function resetZoom(){
+  if(!window._zoom||!window._svgRoot)return;
+  window._svgRoot.transition().duration(500).ease(d3.easeCubicOut).call(window._zoom.transform,d3.zoomIdentity);
+  if(window._svgG)window._svgG.selectAll('.pulse-ring').remove();
+}
 
 function onSearch(q){
   const box=document.getElementById('searchresults');
@@ -297,7 +339,7 @@ function onSearch(q){
   box.style.display='block';
 }
 function hideSearch(){document.getElementById('searchresults').style.display='none';}
-function selectNode(id){document.getElementById('searchinput').value='';hideSearch();const n=nodeById[id]||RAW_NODES.find(n=>n.id===id);if(n)openDetail(n);}
+function selectNode(id){document.getElementById('searchinput').value='';hideSearch();const n=nodeById[id]||RAW_NODES.find(n=>n.id===id);if(n){zoomToNode(id);openDetail(n);}}
 
 function openDetail(node){
   const{_maps,_rl,_dv}=window;
