@@ -50,8 +50,8 @@ header{display:flex;align-items:center;justify-content:space-between;padding:10p
 .panel.on{display:flex}
 .graph-body{flex:1;display:flex;min-height:0;position:relative}
 .gw{flex:1;position:relative;min-height:0}
-#gs{position:absolute;inset:0;width:100%;height:100%;background:#0f172a}
-#gloading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#0f172a;font-family:'DM Mono',monospace;font-size:11px;color:#475569;z-index:10}
+#gs{position:absolute;inset:0;width:100%;height:100%;background:#f8fafc}
+#gloading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#f8fafc;font-family:'DM Mono',monospace;font-size:11px;color:#64748b;z-index:10}
 .legend{position:absolute;bottom:10px;left:12px;display:flex;gap:10px;flex-wrap:wrap;pointer-events:none}
 .li2{display:flex;align-items:center;gap:4px}
 .ld{width:6px;height:6px;border-radius:50%}
@@ -139,10 +139,10 @@ header{display:flex;align-items:center;justify-content:space-between;padding:10p
         <div id="gloading">kennisgraaf laden…</div>
         <svg id="gs"></svg>
         <div class="legend">
-          <div class="li2"><div class="ld" style="background:#6EE7B7"></div><span class="ll">thought</span></div>
-          <div class="li2"><div class="ld" style="background:#93C5FD"></div><span class="ll">project</span></div>
-          <div class="li2"><div class="ld" style="background:#FCA5A5"></div><span class="ll">person</span></div>
-          <div class="li2"><div class="ld" style="background:#FCD34D"></div><span class="ll">idea</span></div>
+          <div class="li2"><div class="ld" style="background:#10b981"></div><span class="ll">thought</span></div>
+          <div class="li2"><div class="ld" style="background:#3b82f6"></div><span class="ll">project</span></div>
+          <div class="li2"><div class="ld" style="background:#ef4444"></div><span class="ll">person</span></div>
+          <div class="li2"><div class="ld" style="background:#f59e0b"></div><span class="ll">idea</span></div>
         </div>
       </div>
       <div id="detail">
@@ -187,8 +187,8 @@ async function sbCnt(table, qs=''){
   return d.length;
 }
 
-const NC={thought:'#6EE7B7',project:'#93C5FD',person:'#FCA5A5',idea:'#FCD34D'};
-const EC={spawned_from:'rgba(99,102,241,.35)',project_person:'rgba(245,158,11,.9)',idea_project:'rgba(167,139,250,.9)'};
+const NC={thought:'#10b981',project:'#3b82f6',person:'#ef4444',idea:'#f59e0b'};
+const EC={spawned_from:'rgba(99,102,241,.5)',project_person:'rgba(245,158,11,.9)',idea_project:'rgba(167,139,250,.9)'};
 const NR={thought:5,project:10,person:8,idea:7};
 const NCL={all:'an',thought:'at',project:'apr',person:'ape',idea:'ai'};
 const ECL={all:'aef',spawned_from:'aef',project_person:'app',idea_project:'aip'};
@@ -252,7 +252,7 @@ function buildG(){
   const g=root.append('g');
   root.call(d3.zoom().scaleExtent([0.1,10]).on('zoom',e=>g.attr('transform',e.transform)));
   root.append('defs').append('marker').attr('id','arr').attr('viewBox','0 -3 6 6').attr('refX',7).attr('markerWidth',4).attr('markerHeight',4).attr('orient','auto')
-    .append('path').attr('d','M0,-3L6,0L0,3').attr('fill','#334155');
+    .append('path').attr('d','M0,-3L6,0L0,3').attr('fill','#64748b');
   sim=d3.forceSimulation(nodes)
     .force('link',d3.forceLink(edges).id(d=>d.id).distance(d=>d.derived?120:75).strength(.45))
     .force('charge',d3.forceManyBody().strength(-220))
@@ -270,10 +270,10 @@ function buildG(){
       .on('end',  (e,d)=>{if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null}))
     .on('click',(e,d)=>{e.stopPropagation();openDetail(d);});
   node.append('circle').attr('r',d=>NR[d.type]||5).attr('fill',d=>NC[d.type]||'#94a3b8')
-    .attr('fill-opacity',.88).attr('stroke','#0f172a').attr('stroke-width',1.5);
+    .attr('fill-opacity',.9).attr('stroke','#fff').attr('stroke-width',1.5);
   node.filter(d=>d.type==='project'||d.type==='person').append('text')
     .attr('dy',d=>-(NR[d.type]||5)-5).attr('text-anchor','middle')
-    .attr('fill','#94a3b8').attr('font-size',9).attr('font-family','DM Sans,sans-serif')
+    .attr('fill','#475569').attr('font-size',9).attr('font-family','DM Sans,sans-serif')
     .attr('pointer-events','none')
     .text(d=>(d.label||'').length>26?d.label.slice(0,26)+'…':d.label);
   sim.on('tick',()=>{
