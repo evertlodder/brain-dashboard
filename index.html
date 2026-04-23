@@ -172,8 +172,6 @@ header{display:flex;align-items:center;justify-content:space-between;padding:10p
   </div>
 </div>
 <script>
-// Key wordt geïnjecteerd door Cloudflare Pages Function via window.SB_KEY
-// Fallback: leeg (werkt niet zonder key)
 const SB  = 'https://fzxpmjvxmpeutwyakgyg.supabase.co';
 const KEY = window.SB_KEY || 'sb_publishable_VhBbcWVfAEwbndKUfoZYNg_LmBbQqj0';
 
@@ -192,7 +190,7 @@ async function sbGet(table, qs=''){
     all = all.concat(d);
     if(d.length < PAGE) break;
     offset += PAGE;
-    if(offset > 20000) break; // hard safety cap
+    if(offset > 20000) break;
   }
   return all;
 }
@@ -206,6 +204,7 @@ const EC={spawned_from:'rgba(99,102,241,.5)',project_person:'rgba(245,158,11,.9)
 const NR={thought:5,project:10,person:8,idea:7};
 const NCL={all:'an',thought:'at',project:'apr',person:'ape',idea:'ai'};
 const ECL={all:'aef',spawned_from:'aef',project_person:'app',idea_project:'aip'};
+const INITIAL_ZOOM = 0.65;   // <-- Start-zoom bij openen (lager = verder uitgezoomd)
 let RAW_NODES=[],RAW_EDGES=[],nodeById={},nf='all',ef='all',sim;
 
 function sw(id,btn){
@@ -271,6 +270,13 @@ function buildG(){
   window._svgG=g;
   window._svgW=W;
   window._svgH=H;
+
+  // Initiele zoom-out zodat je een overzicht ziet bij openen
+  const initialTransform = d3.zoomIdentity
+    .translate(W/2 - (W/2)*INITIAL_ZOOM, H/2 - (H/2)*INITIAL_ZOOM)
+    .scale(INITIAL_ZOOM);
+  root.call(zoom.transform, initialTransform);
+
   root.append('defs').append('marker').attr('id','arr').attr('viewBox','0 -3 6 6').attr('refX',7).attr('markerWidth',4).attr('markerHeight',4).attr('orient','auto')
     .append('path').attr('d','M0,-3L6,0L0,3').attr('fill','#64748b');
   sim=d3.forceSimulation(nodes)
@@ -335,7 +341,11 @@ function zoomToNode(id){
 
 function resetZoom(){
   if(!window._zoom||!window._svgRoot)return;
-  window._svgRoot.transition().duration(500).ease(d3.easeCubicOut).call(window._zoom.transform,d3.zoomIdentity);
+  const W=window._svgW, H=window._svgH;
+  const initialTransform = d3.zoomIdentity
+    .translate(W/2 - (W/2)*INITIAL_ZOOM, H/2 - (H/2)*INITIAL_ZOOM)
+    .scale(INITIAL_ZOOM);
+  window._svgRoot.transition().duration(500).ease(d3.easeCubicOut).call(window._zoom.transform, initialTransform);
   if(window._svgG)window._svgG.selectAll('.pulse-ring').remove();
 }
 
