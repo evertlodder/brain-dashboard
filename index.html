@@ -225,7 +225,7 @@ async function loadGraph(){
     sbGet('derived_edges','?select=source_id,source_type,target_id,target_type,edge_type'),
   ]);
   const lids=new Set([...rl.map(r=>r.source_id),...rl.map(r=>r.target_id),...dv.map(d=>d.source_id),...dv.map(d=>d.target_id)]);
-  cconst tids=[...new Set(rl.filter(r=>r.source_type==='thought').map(r=>r.source_id))].slice(0,5000);
+  cconst tids=[...new Set(rl.filter(r=>r.source_type==='thought').map(r=>r.source_id))].slice(0,500);
   const th=tids.length?await sbGet('thoughts',`?id=in.(${tids.join(',')})&select=id,title,category,content`):[];
   window._maps={
     peopleMap:Object.fromEntries(pe.map(p=>[p.id,p])),
