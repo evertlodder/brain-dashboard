@@ -175,6 +175,9 @@ header{display:flex;align-items:center;justify-content:space-between;padding:10p
 const SB  = 'https://fzxpmjvxmpeutwyakgyg.supabase.co';
 const KEY = window.SB_KEY || 'sb_publishable_VhBbcWVfAEwbndKUfoZYNg_LmBbQqj0';
 
+// FIX: thoughts altijd laden (laatste 200), niet alleen die met een relatie
+const THOUGHTS_LIMIT = 200;
+
 // Paginated fetch: lost PostgREST 1000-row cap op door te paginen met offset/limit
 async function sbGet(table, qs=''){
   const sep = qs.includes('?') ? '&' : '?';
@@ -204,7 +207,7 @@ const EC={spawned_from:'rgba(99,102,241,.5)',project_person:'rgba(245,158,11,.9)
 const NR={thought:5,project:10,person:8,idea:7};
 const NCL={all:'an',thought:'at',project:'apr',person:'ape',idea:'ai'};
 const ECL={all:'aef',spawned_from:'aef',project_person:'app',idea_project:'aip'};
-const INITIAL_ZOOM = 0.65;   // <-- Start-zoom bij openen (lager = verder uitgezoomd)
+const INITIAL_ZOOM = 0.65;
 let RAW_NODES=[],RAW_EDGES=[],nodeById={},nf='all',ef='all',sim;
 
 function sw(id,btn){
@@ -224,9 +227,12 @@ async function loadGraph(){
     sbGet('relations','?select=source_id,source_type,target_id,target_type,relation_type'),
     sbGet('derived_edges','?select=source_id,source_type,target_id,target_type,edge_type'),
   ]);
+
   const lids=new Set([...rl.map(r=>r.source_id),...rl.map(r=>r.target_id),...dv.map(d=>d.source_id),...dv.map(d=>d.target_id)]);
-  const tids=[...new Set(rl.filter(r=>r.source_type==='thought').map(r=>r.source_id))];
-  const th=tids.length?await sbGet('thoughts',`?id=in.(${tids.join(',')})&select=id,title,category,content`):[];
+
+  // FIX: laad altijd de laatste THOUGHTS_LIMIT thoughts, ongeacht of ze een relatie hebben
+  const th = await sbGet('thoughts', `?select=id,title,category,content&order=created_at.desc&limit=${THOUGHTS_LIMIT}`);
+
   window._maps={
     peopleMap:Object.fromEntries(pe.map(p=>[p.id,p])),
     projectMap:Object.fromEntries(pr.map(p=>[p.id,p])),
@@ -234,12 +240,15 @@ async function loadGraph(){
     thoughtMap:Object.fromEntries(th.map(t=>[t.id,t])),
   };
   window._rl=rl; window._dv=dv;
+
   RAW_NODES=[
     ...th.map(t=>({id:t.id,type:'thought',label:t.title||'–',sub:t.category})),
     ...pr.map(p=>({id:p.id,type:'project',label:p.name,sub:p.entity||p.status})),
     ...pe.map(p=>({id:p.id,type:'person', label:p.name,sub:p.company||p.role})),
     ...id.map(i=>({id:i.id,type:'idea',  label:i.title,sub:i.status})),
-  ].filter(n=>lids.has(n.id)||n.type==='project'||n.type==='person');
+  // FIX: thoughts altijd tonen; andere types alleen als ze een relatie hebben
+  ].filter(n=>n.type==='thought'||lids.has(n.id)||n.type==='project'||n.type==='person');
+
   const nids=new Set(RAW_NODES.map(n=>n.id));
   RAW_EDGES=[
     ...rl.filter(r=>nids.has(r.source_id)&&nids.has(r.target_id)).map(r=>({sid:r.source_id,tid:r.target_id,type:r.relation_type,derived:false})),
@@ -271,7 +280,6 @@ function buildG(){
   window._svgW=W;
   window._svgH=H;
 
-  // Initiele zoom-out zodat je een overzicht ziet bij openen
   const initialTransform = d3.zoomIdentity
     .translate(W/2 - (W/2)*INITIAL_ZOOM, H/2 - (H/2)*INITIAL_ZOOM)
     .scale(INITIAL_ZOOM);
