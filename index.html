@@ -43,6 +43,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:10p
 .ape{border-color:#dc2626;background:#fef2f2;color:#dc2626}
 .ai{border-color:#d97706;background:#fffbeb;color:#d97706}
 .aef{border-color:#6366f1;background:#eef2ff;color:#4338ca}
+.asp{border-color:#6366f1;background:#eef2ff;color:#4338ca}
 .app{border-color:#d97706;background:#fffbeb;color:#d97706}
 .aip{border-color:#7c3aed;background:#f5f3ff;color:#7c3aed}
 .sep{width:1px;height:12px;background:#e2e8f0}
@@ -123,17 +124,17 @@ header{display:flex;align-items:center;justify-content:space-between;padding:10p
     </div>
     <div class="gc">
       <span class="fl">Nodes</span>
-      <button class="chip an"  data-nf="all"     onclick="sNF(this)">Alles</button>
-      <button class="chip"     data-nf="thought" onclick="sNF(this)">Thoughts</button>
-      <button class="chip"     data-nf="project" onclick="sNF(this)">Projects</button>
-      <button class="chip"     data-nf="person"  onclick="sNF(this)">People</button>
-      <button class="chip"     data-nf="idea"    onclick="sNF(this)">Ideas</button>
+      <button class="chip" data-nf="all"     onclick="sNF(this)">Alles</button>
+      <button class="chip" data-nf="thought" onclick="sNF(this)">Thoughts</button>
+      <button class="chip" data-nf="project" onclick="sNF(this)">Projects</button>
+      <button class="chip" data-nf="person"  onclick="sNF(this)">People</button>
+      <button class="chip" data-nf="idea"    onclick="sNF(this)">Ideas</button>
       <div class="sep"></div>
       <span class="fl">Edges</span>
-      <button class="chip aef" data-ef="all"            onclick="sEF(this)">Alle</button>
-      <button class="chip"     data-ef="spawned_from"   onclick="sEF(this)">spawned→</button>
-      <button class="chip"     data-ef="project_person" onclick="sEF(this)">proj→person</button>
-      <button class="chip"     data-ef="idea_project"   onclick="sEF(this)">idea→proj</button>
+      <button class="chip" data-ef="all"            onclick="sEF(this)">Alle</button>
+      <button class="chip" data-ef="spawned_from"   onclick="sEF(this)">spawned→</button>
+      <button class="chip" data-ef="project_person" onclick="sEF(this)">proj→person</button>
+      <button class="chip" data-ef="idea_project"   onclick="sEF(this)">idea→proj</button>
       <span class="sb" id="gstat">laden…</span>
     </div>
     <div class="graph-body">
@@ -174,10 +175,8 @@ header{display:flex;align-items:center;justify-content:space-between;padding:10p
 <script>
 const SB  = 'https://fzxpmjvxmpeutwyakgyg.supabase.co';
 const KEY = window.SB_KEY || 'sb_publishable_VhBbcWVfAEwbndKUfoZYNg_LmBbQqj0';
-
 // FIX: thoughts altijd laden (laatste 200), niet alleen die met een relatie
 const THOUGHTS_LIMIT = 200;
-
 // Paginated fetch: lost PostgREST 1000-row cap op door te paginen met offset/limit
 async function sbGet(table, qs=''){
   const sep = qs.includes('?') ? '&' : '?';
@@ -201,15 +200,21 @@ async function sbCnt(table, qs=''){
   const d = await sbGet(table, `?select=id${qs}`);
   return d.length;
 }
-
 const NC={thought:'#10b981',project:'#3b82f6',person:'#ef4444',idea:'#f59e0b'};
 const EC={spawned_from:'rgba(99,102,241,.5)',project_person:'rgba(245,158,11,.9)',idea_project:'rgba(167,139,250,.9)'};
 const NR={thought:5,project:10,person:8,idea:7};
-const NCL={all:'an',thought:'at',project:'apr',person:'ape',idea:'ai'};
-const ECL={all:'aef',spawned_from:'aef',project_person:'app',idea_project:'aip'};
+// Color class per node-type (bij actief in multi-select)
+const NCL={thought:'at',project:'apr',person:'ape',idea:'ai'};
+// Color class per edge-type (bij actief in multi-select)
+const ECL={spawned_from:'asp',project_person:'app',idea_project:'aip'};
+// Volledige sets — gebruikt door "Alles"/"Alle" reset en chip-state vergelijking
+const ALL_NODE_TYPES = ['thought','project','person','idea'];
+const ALL_EDGE_TYPES = ['spawned_from','project_person','idea_project'];
 const INITIAL_ZOOM = 0.65;
-let RAW_NODES=[],RAW_EDGES=[],nodeById={},nf='all',ef='all',sim;
-
+let RAW_NODES=[],RAW_EDGES=[],nodeById={},sim;
+// FIX: defaults — Thoughts UIT, Spawned-edges UIT (minder overweldigend)
+let nf = new Set(['project','person','idea']);
+let ef = new Set(['project_person','idea_project']);
 function sw(id,btn){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
@@ -218,7 +223,6 @@ function sw(id,btn){
   if(id==='graph') setTimeout(buildG,60);
   if(id==='health') loadH();
 }
-
 async function loadGraph(){
   const [pr,pe,id,rl,dv]=await Promise.all([
     sbGet('projects','?select=id,name,status,entity'),
@@ -227,12 +231,9 @@ async function loadGraph(){
     sbGet('relations','?select=source_id,source_type,target_id,target_type,relation_type'),
     sbGet('derived_edges','?select=source_id,source_type,target_id,target_type,edge_type'),
   ]);
-
   const lids=new Set([...rl.map(r=>r.source_id),...rl.map(r=>r.target_id),...dv.map(d=>d.source_id),...dv.map(d=>d.target_id)]);
-
   // FIX: laad altijd de laatste THOUGHTS_LIMIT thoughts, ongeacht of ze een relatie hebben
   const th = await sbGet('thoughts', `?select=id,title,category,content&order=created_at.desc&limit=${THOUGHTS_LIMIT}`);
-
   window._maps={
     peopleMap:Object.fromEntries(pe.map(p=>[p.id,p])),
     projectMap:Object.fromEntries(pr.map(p=>[p.id,p])),
@@ -240,7 +241,6 @@ async function loadGraph(){
     thoughtMap:Object.fromEntries(th.map(t=>[t.id,t])),
   };
   window._rl=rl; window._dv=dv;
-
   RAW_NODES=[
     ...th.map(t=>({id:t.id,type:'thought',label:t.title||'–',sub:t.category})),
     ...pr.map(p=>({id:p.id,type:'project',label:p.name,sub:p.entity||p.status})),
@@ -248,16 +248,16 @@ async function loadGraph(){
     ...id.map(i=>({id:i.id,type:'idea',  label:i.title,sub:i.status})),
   // FIX: thoughts altijd tonen; andere types alleen als ze een relatie hebben
   ].filter(n=>n.type==='thought'||lids.has(n.id)||n.type==='project'||n.type==='person');
-
   const nids=new Set(RAW_NODES.map(n=>n.id));
   RAW_EDGES=[
     ...rl.filter(r=>nids.has(r.source_id)&&nids.has(r.target_id)).map(r=>({sid:r.source_id,tid:r.target_id,type:r.relation_type,derived:false})),
     ...dv.filter(d=>nids.has(d.source_id)&&nids.has(d.target_id)).map(d=>({sid:d.source_id,tid:d.target_id,type:d.edge_type,derived:true})),
   ];
   document.getElementById('gloading').style.display='none';
+  updateNFChips();
+  updateEFChips();
   buildG();
 }
-
 function buildG(){
   const el=document.getElementById('gs');
   const W=el.clientWidth,H=el.clientHeight;
@@ -265,9 +265,11 @@ function buildG(){
   if(sim)sim.stop();
   d3.select(el).selectAll('*').remove();
   nodeById={};
-  const nodes=(nf==='all'?RAW_NODES:RAW_NODES.filter(n=>n.type===nf)).map(n=>({...n}));
+  // FIX: multi-select node filter
+  const nodes=RAW_NODES.filter(n=>nf.has(n.type)).map(n=>({...n}));
   nodes.forEach(n=>nodeById[n.id]=n);
-  const edges=RAW_EDGES.filter(e=>nodeById[e.sid]&&nodeById[e.tid]&&(ef==='all'||e.type===ef))
+  // FIX: multi-select edge filter
+  const edges=RAW_EDGES.filter(e=>nodeById[e.sid]&&nodeById[e.tid]&&ef.has(e.type))
     .map(e=>({source:nodeById[e.sid],target:nodeById[e.tid],type:e.type,derived:e.derived}));
   document.getElementById('gstat').textContent=`${nodes.length} nodes · ${edges.length} edges`;
   const root=d3.select(el);
@@ -279,12 +281,10 @@ function buildG(){
   window._svgG=g;
   window._svgW=W;
   window._svgH=H;
-
   const initialTransform = d3.zoomIdentity
     .translate(W/2 - (W/2)*INITIAL_ZOOM, H/2 - (H/2)*INITIAL_ZOOM)
     .scale(INITIAL_ZOOM);
   root.call(zoom.transform, initialTransform);
-
   root.append('defs').append('marker').attr('id','arr').attr('viewBox','0 -3 6 6').attr('refX',7).attr('markerWidth',4).attr('markerHeight',4).attr('orient','auto')
     .append('path').attr('d','M0,-3L6,0L0,3').attr('fill','#64748b');
   sim=d3.forceSimulation(nodes)
@@ -317,12 +317,53 @@ function buildG(){
   });
   d3.select(el).on('click',()=>{closeDetail();resetZoom();});
 }
-
 function rG(){if(RAW_NODES.length)buildG();}
 window.addEventListener('resize',rG);
-function sNF(btn){nf=btn.dataset.nf;document.querySelectorAll('[data-nf]').forEach(b=>b.className='chip'+(b===btn?' '+(NCL[nf]||'an'):''));closeDetail();rG();}
-function sEF(btn){ef=btn.dataset.ef;document.querySelectorAll('[data-ef]').forEach(b=>b.className='chip'+(b===btn?' '+(ECL[ef]||'aef'):''));closeDetail();rG();}
-
+// FIX: multi-select chip handlers + visuele state
+function updateNFChips(){
+  const allOn = ALL_NODE_TYPES.every(t=>nf.has(t));
+  document.querySelectorAll('[data-nf]').forEach(b=>{
+    const t=b.dataset.nf;
+    if(t==='all'){
+      b.className='chip'+(allOn?' an':'');
+    }else{
+      b.className='chip'+(nf.has(t)?' '+(NCL[t]||'an'):'');
+    }
+  });
+}
+function updateEFChips(){
+  const allOn = ALL_EDGE_TYPES.every(t=>ef.has(t));
+  document.querySelectorAll('[data-ef]').forEach(b=>{
+    const t=b.dataset.ef;
+    if(t==='all'){
+      b.className='chip'+(allOn?' aef':'');
+    }else{
+      b.className='chip'+(ef.has(t)?' '+(ECL[t]||'aef'):'');
+    }
+  });
+}
+function sNF(btn){
+  const t=btn.dataset.nf;
+  if(t==='all'){
+    nf=new Set(ALL_NODE_TYPES);
+  }else{
+    if(nf.has(t)) nf.delete(t); else nf.add(t);
+  }
+  updateNFChips();
+  closeDetail();
+  rG();
+}
+function sEF(btn){
+  const t=btn.dataset.ef;
+  if(t==='all'){
+    ef=new Set(ALL_EDGE_TYPES);
+  }else{
+    if(ef.has(t)) ef.delete(t); else ef.add(t);
+  }
+  updateEFChips();
+  closeDetail();
+  rG();
+}
 function zoomToNode(id){
   const n=nodeById[id];
   if(!n||!window._zoom||!window._svgRoot)return;
@@ -346,7 +387,6 @@ function zoomToNode(id){
     setTimeout(()=>window._svgG.selectAll('.pulse-ring').remove(),2400);
   }
 }
-
 function resetZoom(){
   if(!window._zoom||!window._svgRoot)return;
   const W=window._svgW, H=window._svgH;
@@ -356,7 +396,6 @@ function resetZoom(){
   window._svgRoot.transition().duration(500).ease(d3.easeCubicOut).call(window._zoom.transform, initialTransform);
   if(window._svgG)window._svgG.selectAll('.pulse-ring').remove();
 }
-
 function onSearch(q){
   const box=document.getElementById('searchresults');
   if(!q.trim()){box.style.display='none';return;}
@@ -367,7 +406,6 @@ function onSearch(q){
 }
 function hideSearch(){document.getElementById('searchresults').style.display='none';}
 function selectNode(id){document.getElementById('searchinput').value='';hideSearch();const n=nodeById[id]||RAW_NODES.find(n=>n.id===id);if(n){zoomToNode(id);openDetail(n);}}
-
 function openDetail(node){
   const{_maps,_rl,_dv}=window;
   if(!_maps)return;
@@ -413,7 +451,6 @@ function openDetail(node){
   document.getElementById('detail').classList.add('open');
 }
 function closeDetail(){document.getElementById('detail').classList.remove('open');}
-
 let hl=false;
 async function loadH(){
   if(hl)return;hl=true;
@@ -431,7 +468,6 @@ async function loadH(){
   document.getElementById('lbg').innerHTML=(hi?`<div class="bg bgh"><div class="bd" style="background:#ef4444"></div>${hi} hoog</div>`:'')+( mi?`<div class="bg bgm"><div class="bd" style="background:#f59e0b"></div>${mi} medium</div>`:'');
   document.getElementById('ll').innerHTML=items.map(i=>`<div class="litem ${i.severity}"><div class="ldot"></div><div class="lb"><div class="lt"><span class="llab">${i.label}</span><span class="lcnt">${(i.count||0).toLocaleString('nl-NL')}</span></div><div class="ldesc">${i.description||''}</div></div></div>`).join('');
 }
-
 loadGraph();
 </script>
 </body>
