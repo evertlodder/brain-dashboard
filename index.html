@@ -175,9 +175,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:10p
 <script>
 const SB  = 'https://fzxpmjvxmpeutwyakgyg.supabase.co';
 const KEY = window.SB_KEY || 'sb_publishable_VhBbcWVfAEwbndKUfoZYNg_LmBbQqj0';
-// FIX: thoughts altijd laden (laatste 200), niet alleen die met een relatie
 const THOUGHTS_LIMIT = 200;
-// Paginated fetch: lost PostgREST 1000-row cap op door te paginen met offset/limit
 async function sbGet(table, qs=''){
   const sep = qs.includes('?') ? '&' : '?';
   const PAGE = 1000;
@@ -203,18 +201,16 @@ async function sbCnt(table, qs=''){
 const NC={thought:'#10b981',project:'#3b82f6',person:'#ef4444',idea:'#f59e0b'};
 const EC={spawned_from:'rgba(99,102,241,.5)',project_person:'rgba(245,158,11,.9)',idea_project:'rgba(167,139,250,.9)'};
 const NR={thought:5,project:10,person:8,idea:7};
-// Color class per node-type (bij actief in multi-select)
 const NCL={thought:'at',project:'apr',person:'ape',idea:'ai'};
-// Color class per edge-type (bij actief in multi-select)
 const ECL={spawned_from:'asp',project_person:'app',idea_project:'aip'};
-// Volledige sets — gebruikt door "Alles"/"Alle" reset en chip-state vergelijking
 const ALL_NODE_TYPES = ['thought','project','person','idea'];
-const ALL_EDGE_TYPES = ['spawned_from','project_person','idea_project'];
+// FIX: edge-types worden dynamisch ontdekt na data-load (er bestaan ook involves/belongs_to/related_to + derived edge_types)
+let ALL_EDGE_TYPES_DYN = [];
 const INITIAL_ZOOM = 0.65;
 let RAW_NODES=[],RAW_EDGES=[],nodeById={},sim;
-// FIX: defaults — Thoughts UIT, Spawned-edges UIT (minder overweldigend)
+// Defaults: Thoughts UIT (minder ruis); edges = ALLES (gevuld na data-load)
 let nf = new Set(['project','person','idea']);
-let ef = new Set(['project_person','idea_project']);
+let ef = new Set();
 function sw(id,btn){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
@@ -232,7 +228,6 @@ async function loadGraph(){
     sbGet('derived_edges','?select=source_id,source_type,target_id,target_type,edge_type'),
   ]);
   const lids=new Set([...rl.map(r=>r.source_id),...rl.map(r=>r.target_id),...dv.map(d=>d.source_id),...dv.map(d=>d.target_id)]);
-  // FIX: laad altijd de laatste THOUGHTS_LIMIT thoughts, ongeacht of ze een relatie hebben
   const th = await sbGet('thoughts', `?select=id,title,category,content&order=created_at.desc&limit=${THOUGHTS_LIMIT}`);
   window._maps={
     peopleMap:Object.fromEntries(pe.map(p=>[p.id,p])),
@@ -246,13 +241,15 @@ async function loadGraph(){
     ...pr.map(p=>({id:p.id,type:'project',label:p.name,sub:p.entity||p.status})),
     ...pe.map(p=>({id:p.id,type:'person', label:p.name,sub:p.company||p.role})),
     ...id.map(i=>({id:i.id,type:'idea',  label:i.title,sub:i.status})),
-  // FIX: thoughts altijd tonen; andere types alleen als ze een relatie hebben
   ].filter(n=>n.type==='thought'||lids.has(n.id)||n.type==='project'||n.type==='person');
   const nids=new Set(RAW_NODES.map(n=>n.id));
   RAW_EDGES=[
     ...rl.filter(r=>nids.has(r.source_id)&&nids.has(r.target_id)).map(r=>({sid:r.source_id,tid:r.target_id,type:r.relation_type,derived:false})),
     ...dv.filter(d=>nids.has(d.source_id)&&nids.has(d.target_id)).map(d=>({sid:d.source_id,tid:d.target_id,type:d.edge_type,derived:true})),
   ];
+  // FIX: ontdek alle voorkomende edge types en zet ef op "alles aan"
+  ALL_EDGE_TYPES_DYN = [...new Set(RAW_EDGES.map(e=>e.type).filter(Boolean))];
+  ef = new Set(ALL_EDGE_TYPES_DYN);
   document.getElementById('gloading').style.display='none';
   updateNFChips();
   updateEFChips();
@@ -265,10 +262,8 @@ function buildG(){
   if(sim)sim.stop();
   d3.select(el).selectAll('*').remove();
   nodeById={};
-  // FIX: multi-select node filter
   const nodes=RAW_NODES.filter(n=>nf.has(n.type)).map(n=>({...n}));
   nodes.forEach(n=>nodeById[n.id]=n);
-  // FIX: multi-select edge filter
   const edges=RAW_EDGES.filter(e=>nodeById[e.sid]&&nodeById[e.tid]&&ef.has(e.type))
     .map(e=>({source:nodeById[e.sid],target:nodeById[e.tid],type:e.type,derived:e.derived}));
   document.getElementById('gstat').textContent=`${nodes.length} nodes · ${edges.length} edges`;
@@ -319,7 +314,6 @@ function buildG(){
 }
 function rG(){if(RAW_NODES.length)buildG();}
 window.addEventListener('resize',rG);
-// FIX: multi-select chip handlers + visuele state
 function updateNFChips(){
   const allOn = ALL_NODE_TYPES.every(t=>nf.has(t));
   document.querySelectorAll('[data-nf]').forEach(b=>{
@@ -332,7 +326,7 @@ function updateNFChips(){
   });
 }
 function updateEFChips(){
-  const allOn = ALL_EDGE_TYPES.every(t=>ef.has(t));
+  const allOn = ALL_EDGE_TYPES_DYN.length>0 && ALL_EDGE_TYPES_DYN.every(t=>ef.has(t));
   document.querySelectorAll('[data-ef]').forEach(b=>{
     const t=b.dataset.ef;
     if(t==='all'){
@@ -356,7 +350,7 @@ function sNF(btn){
 function sEF(btn){
   const t=btn.dataset.ef;
   if(t==='all'){
-    ef=new Set(ALL_EDGE_TYPES);
+    ef=new Set(ALL_EDGE_TYPES_DYN);
   }else{
     if(ef.has(t)) ef.delete(t); else ef.add(t);
   }
