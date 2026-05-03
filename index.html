@@ -46,6 +46,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:10p
 .asp{border-color:#6366f1;background:#eef2ff;color:#4338ca}
 .app{border-color:#d97706;background:#fffbeb;color:#d97706}
 .aip{border-color:#7c3aed;background:#f5f3ff;color:#7c3aed}
+.aco{border-color:#8b5cf6;background:#f5f3ff;color:#6d28d9}
 .sep{width:1px;height:12px;background:#e2e8f0}
 .sb{margin-left:auto;font-family:'DM Mono',monospace;font-size:10px;color:#94a3b8}
 .content{flex:1;display:flex;flex-direction:column;min-height:0}
@@ -129,6 +130,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:10p
       <button class="chip" data-nf="project" onclick="sNF(this)">Projects</button>
       <button class="chip" data-nf="person"  onclick="sNF(this)">People</button>
       <button class="chip" data-nf="idea"    onclick="sNF(this)">Ideas</button>
+      <button class="chip" data-nf="company" onclick="sNF(this)">Companies</button>
       <div class="sep"></div>
       <span class="fl">Edges</span>
       <button class="chip" data-ef="all"            onclick="sEF(this)">Alle</button>
@@ -146,6 +148,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:10p
           <div class="li2"><div class="ld" style="background:#3b82f6"></div><span class="ll">project</span></div>
           <div class="li2"><div class="ld" style="background:#ef4444"></div><span class="ll">person</span></div>
           <div class="li2"><div class="ld" style="background:#f59e0b"></div><span class="ll">idea</span></div>
+          <div class="li2"><div class="ld" style="background:#8b5cf6"></div><span class="ll">company</span></div>
         </div>
       </div>
       <div id="detail">
@@ -198,16 +201,16 @@ async function sbCnt(table, qs=''){
   const d = await sbGet(table, `?select=id${qs}`);
   return d.length;
 }
-const NC={thought:'#10b981',project:'#3b82f6',person:'#ef4444',idea:'#f59e0b'};
+const NC={thought:'#10b981',project:'#3b82f6',person:'#ef4444',idea:'#f59e0b',company:'#8b5cf6'};
 const EC={spawned_from:'rgba(99,102,241,.5)',project_person:'rgba(245,158,11,.9)',idea_project:'rgba(167,139,250,.9)'};
-const NR={thought:5,project:10,person:8,idea:7};
-const NCL={thought:'at',project:'apr',person:'ape',idea:'ai'};
+const NR={thought:5,project:10,person:8,idea:7,company:11};
+const NCL={thought:'at',project:'apr',person:'ape',idea:'ai',company:'aco'};
 const ECL={spawned_from:'asp',project_person:'app',idea_project:'aip'};
-const ALL_NODE_TYPES = ['thought','project','person','idea'];
+const ALL_NODE_TYPES = ['thought','project','person','idea','company'];
 let ALL_EDGE_TYPES_DYN = [];
 const INITIAL_ZOOM = 0.65;
 let RAW_NODES=[],RAW_EDGES=[],nodeById={},sim;
-let nf = new Set(['project','person','idea']);
+let nf = new Set(['project','person','idea','company']);
 let ef = new Set();
 function sw(id,btn){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
@@ -218,12 +221,13 @@ function sw(id,btn){
   if(id==='health') loadH();
 }
 async function loadGraph(){
-  const [pr,pe,id,rl,dv]=await Promise.all([
+  const [pr,pe,id,rl,dv,co]=await Promise.all([
     sbGet('projects','?select=id,name,status,entity'),
     sbGet('people',  '?select=id,name,company,role'),
     sbGet('ideas',   '?select=id,title,status,category'),
     sbGet('relations','?select=source_id,source_type,target_id,target_type,relation_type'),
     sbGet('derived_edges','?select=source_id,source_type,target_id,target_type,edge_type'),
+    sbGet('companies','?select=id,name,sector,country'),
   ]);
   const lids=new Set([...rl.map(r=>r.source_id),...rl.map(r=>r.target_id),...dv.map(d=>d.source_id),...dv.map(d=>d.target_id)]);
   const th = await sbGet('thoughts', `?select=id,title,category,content&order=created_at.desc&limit=${THOUGHTS_LIMIT}`);
@@ -232,6 +236,7 @@ async function loadGraph(){
     projectMap:Object.fromEntries(pr.map(p=>[p.id,p])),
     ideaMap:Object.fromEntries(id.map(i=>[i.id,i])),
     thoughtMap:Object.fromEntries(th.map(t=>[t.id,t])),
+    companyMap:Object.fromEntries(co.map(c=>[c.id,c])),
   };
   window._rl=rl; window._dv=dv;
   RAW_NODES=[
@@ -239,7 +244,8 @@ async function loadGraph(){
     ...pr.map(p=>({id:p.id,type:'project',label:p.name,sub:p.entity||p.status})),
     ...pe.map(p=>({id:p.id,type:'person', label:p.name,sub:p.company,role:p.role||''})),
     ...id.map(i=>({id:i.id,type:'idea',  label:i.title,sub:i.status})),
-  ].filter(n=>n.type==='thought'||lids.has(n.id)||n.type==='project'||n.type==='person');
+    ...co.map(c=>({id:c.id,type:'company',label:c.name,sub:c.sector||c.country||''})),
+  ].filter(n=>n.type==='thought'||lids.has(n.id)||n.type==='project'||n.type==='person'||n.type==='company');
   const nids=new Set(RAW_NODES.map(n=>n.id));
   RAW_EDGES=[
     ...rl.filter(r=>nids.has(r.source_id)&&nids.has(r.target_id)).map(r=>({sid:r.source_id,tid:r.target_id,type:r.relation_type,derived:false})),
@@ -298,8 +304,8 @@ function buildG(){
   node.append('circle').attr('r',d=>NR[d.type]||5).attr('fill',d=>NC[d.type]||'#94a3b8')
     .attr('fill-opacity',.9).attr('stroke','#fff').attr('stroke-width',1.5)
     .attr('data-node-id',d=>d.id);
-  // Name label (projects + persons)
-  node.filter(d=>d.type==='project'||d.type==='person').append('text')
+  // Name label (projects + persons + companies)
+  node.filter(d=>d.type==='project'||d.type==='person'||d.type==='company').append('text')
     .attr('dy',d=>-(NR[d.type]||5)-5).attr('text-anchor','middle')
     .attr('fill','#475569').attr('font-size',9).attr('font-family','DM Sans,sans-serif')
     .attr('pointer-events','none')
@@ -429,7 +435,7 @@ function openDetail(node){
   const groups={};
   connected.forEach(c=>{(groups[c.type]||(groups[c.type]=[])).push(c);});
   let html='';
-  const raw=_maps.projectMap[node.id]||_maps.peopleMap[node.id]||_maps.ideaMap[node.id]||_maps.thoughtMap[node.id];
+  const raw=_maps.projectMap[node.id]||_maps.peopleMap[node.id]||_maps.ideaMap[node.id]||_maps.thoughtMap[node.id]||_maps.companyMap[node.id];
   if(raw){
     html+='<div class="dp-section"><div class="dp-seclbl">Details</div><div style="display:flex;flex-direction:column;gap:6px">';
     if(raw.status)    html+=`<div style="font-size:11px;color:#475569"><span style="color:#94a3b8;font-family:DM Mono,monospace;font-size:9px;display:block">status</span>${raw.status}</div>`;
@@ -440,7 +446,7 @@ function openDetail(node){
     if(raw.content)   html+=`<div style="font-size:11px;color:#475569;line-height:1.5"><span style="color:#94a3b8;font-family:DM Mono,monospace;font-size:9px;display:block">content</span>${(raw.content||'').slice(0,200)}${(raw.content||'').length>200?'…':''}</div>`;
     html+='</div></div>';
   }
-  ['project','person','idea','thought'].forEach(t=>{
+  ['company','project','person','idea','thought'].forEach(t=>{
     if(!groups[t]||!groups[t].length)return;
     html+=`<div class="dp-section"><div class="dp-seclbl">${t}s (${groups[t].length})</div><div class="dp-conn">`;
     groups[t].slice(0,12).forEach(c=>{
@@ -457,11 +463,11 @@ function closeDetail(){document.getElementById('detail').classList.remove('open'
 let hl=false;
 async function loadH(){
   if(hl)return;hl=true;
-  const [lr,tc,pc,pec,ic,rc,dc]=await Promise.all([
+  const [lr,tc,pc,pec,ic,rc,dc,cc]=await Promise.all([
     sbGet('brain_lint_results','?order=run_at.desc&limit=30'),
     sbCnt('thoughts'),sbCnt('projects'),sbCnt('people'),sbCnt('ideas'),sbCnt('relations'),sbCnt('derived_edges'),
   ]);
-  document.getElementById('sg').innerHTML=[['Thoughts',tc,'#16a34a'],['Projects',pc,'#2563eb'],['People',pec,'#dc2626'],['Ideas',ic,'#d97706'],['Relaties',rc,'#7c3aed'],['Derived',dc,'#f59e0b']]
+  document.getElementById('sg').innerHTML=[['Thoughts',tc,'#16a34a'],['Projects',pc,'#2563eb'],['People',pec,'#dc2626'],['Ideas',ic,'#d97706'],['Companies',cc,'#8b5cf6'],['Relaties',rc,'#7c3aed']]
     .map(([l,v,c])=>`<div class="sc"><div class="scl">${l}</div><div class="scv">${v.toLocaleString('nl-NL')}</div><div class="scb" style="background:${c}"></div></div>`).join('');
   if(!lr.length){document.getElementById('lr').textContent='Nog geen run';return;}
   const lat=lr[0].run_at;
