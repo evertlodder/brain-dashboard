@@ -204,11 +204,9 @@ const NR={thought:5,project:10,person:8,idea:7};
 const NCL={thought:'at',project:'apr',person:'ape',idea:'ai'};
 const ECL={spawned_from:'asp',project_person:'app',idea_project:'aip'};
 const ALL_NODE_TYPES = ['thought','project','person','idea'];
-// FIX: edge-types worden dynamisch ontdekt na data-load (er bestaan ook involves/belongs_to/related_to + derived edge_types)
 let ALL_EDGE_TYPES_DYN = [];
 const INITIAL_ZOOM = 0.65;
 let RAW_NODES=[],RAW_EDGES=[],nodeById={},sim;
-// Defaults: Thoughts UIT (minder ruis); edges = ALLES (gevuld na data-load)
 let nf = new Set(['project','person','idea']);
 let ef = new Set();
 function sw(id,btn){
@@ -239,7 +237,7 @@ async function loadGraph(){
   RAW_NODES=[
     ...th.map(t=>({id:t.id,type:'thought',label:t.title||'–',sub:t.category})),
     ...pr.map(p=>({id:p.id,type:'project',label:p.name,sub:p.entity||p.status})),
-    ...pe.map(p=>({id:p.id,type:'person', label:p.name,sub:p.company||p.role})),
+    ...pe.map(p=>({id:p.id,type:'person', label:p.name,sub:p.company,role:p.role||''})),
     ...id.map(i=>({id:i.id,type:'idea',  label:i.title,sub:i.status})),
   ].filter(n=>n.type==='thought'||lids.has(n.id)||n.type==='project'||n.type==='person');
   const nids=new Set(RAW_NODES.map(n=>n.id));
@@ -247,7 +245,6 @@ async function loadGraph(){
     ...rl.filter(r=>nids.has(r.source_id)&&nids.has(r.target_id)).map(r=>({sid:r.source_id,tid:r.target_id,type:r.relation_type,derived:false})),
     ...dv.filter(d=>nids.has(d.source_id)&&nids.has(d.target_id)).map(d=>({sid:d.source_id,tid:d.target_id,type:d.edge_type,derived:true})),
   ];
-  // FIX: ontdek alle voorkomende edge types en zet ef op "alles aan"
   ALL_EDGE_TYPES_DYN = [...new Set(RAW_EDGES.map(e=>e.type).filter(Boolean))];
   ef = new Set(ALL_EDGE_TYPES_DYN);
   document.getElementById('gloading').style.display='none';
@@ -301,11 +298,18 @@ function buildG(){
   node.append('circle').attr('r',d=>NR[d.type]||5).attr('fill',d=>NC[d.type]||'#94a3b8')
     .attr('fill-opacity',.9).attr('stroke','#fff').attr('stroke-width',1.5)
     .attr('data-node-id',d=>d.id);
+  // Name label (projects + persons)
   node.filter(d=>d.type==='project'||d.type==='person').append('text')
     .attr('dy',d=>-(NR[d.type]||5)-5).attr('text-anchor','middle')
     .attr('fill','#475569').attr('font-size',9).attr('font-family','DM Sans,sans-serif')
     .attr('pointer-events','none')
     .text(d=>(d.label||'').length>26?d.label.slice(0,26)+'…':d.label);
+  // Role label (persons only, below name)
+  node.filter(d=>d.type==='person'&&d.role).append('text')
+    .attr('dy',d=>-(NR[d.type]||5)+5).attr('text-anchor','middle')
+    .attr('fill','#94a3b8').attr('font-size',8).attr('font-family','DM Mono,monospace')
+    .attr('pointer-events','none')
+    .text(d=>(d.role||'').length>24?d.role.slice(0,24)+'…':d.role);
   sim.on('tick',()=>{
     link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
     node.attr('transform',d=>`translate(${d.x},${d.y})`);
