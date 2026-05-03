@@ -304,12 +304,17 @@ function buildG(){
     .attr('fill','#475569').attr('font-size',9).attr('font-family','DM Sans,sans-serif')
     .attr('pointer-events','none')
     .text(d=>(d.label||'').length>26?d.label.slice(0,26)+'…':d.label);
-  // Role label (persons only, below name)
+  // Role label (persons only) — hidden by default, shown on hover
   node.filter(d=>d.type==='person'&&d.role).append('text')
+    .attr('class','role-lbl')
     .attr('dy',d=>-(NR[d.type]||5)+5).attr('text-anchor','middle')
     .attr('fill','#94a3b8').attr('font-size',8).attr('font-family','DM Mono,monospace')
-    .attr('pointer-events','none')
+    .attr('pointer-events','none').attr('opacity',0)
+    .style('transition','opacity .15s')
     .text(d=>(d.role||'').length>24?d.role.slice(0,24)+'…':d.role);
+  // Hover: show/hide role label
+  node.on('mouseover',function(){d3.select(this).select('.role-lbl').attr('opacity',1);})
+      .on('mouseout', function(){d3.select(this).select('.role-lbl').attr('opacity',0);});
   sim.on('tick',()=>{
     link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
     node.attr('transform',d=>`translate(${d.x},${d.y})`);
