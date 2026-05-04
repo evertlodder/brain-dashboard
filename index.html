@@ -304,13 +304,11 @@ function buildG(){
   node.append('circle').attr('r',d=>NR[d.type]||5).attr('fill',d=>NC[d.type]||'#94a3b8')
     .attr('fill-opacity',.9).attr('stroke','#fff').attr('stroke-width',1.5)
     .attr('data-node-id',d=>d.id);
-  // Name label (projects + persons + companies)
   node.filter(d=>d.type==='project'||d.type==='person'||d.type==='company').append('text')
     .attr('dy',d=>-(NR[d.type]||5)-5).attr('text-anchor','middle')
     .attr('fill','#475569').attr('font-size',9).attr('font-family','DM Sans,sans-serif')
     .attr('pointer-events','none')
     .text(d=>(d.label||'').length>26?d.label.slice(0,26)+'…':d.label);
-  // Role label (persons only) — hidden by default, shown on hover
   node.filter(d=>d.type==='person'&&d.role).append('text')
     .attr('class','role-lbl')
     .attr('dy',d=>-(NR[d.type]||5)+5).attr('text-anchor','middle')
@@ -318,7 +316,6 @@ function buildG(){
     .attr('pointer-events','none').attr('opacity',0)
     .style('transition','opacity .15s')
     .text(d=>(d.role||'').length>24?d.role.slice(0,24)+'…':d.role);
-  // Hover: show/hide role label
   node.on('mouseover',function(){d3.select(this).select('.role-lbl').attr('opacity',1);})
       .on('mouseout', function(){d3.select(this).select('.role-lbl').attr('opacity',0);});
   sim.on('tick',()=>{
@@ -463,19 +460,26 @@ function closeDetail(){document.getElementById('detail').classList.remove('open'
 let hl=false;
 async function loadH(){
   if(hl)return;hl=true;
-  const [lr,tc,pc,pec,ic,rc,dc,cc]=await Promise.all([
-    sbGet('brain_lint_results','?order=run_at.desc&limit=30'),
-    sbCnt('thoughts'),sbCnt('projects'),sbCnt('people'),sbCnt('ideas'),sbCnt('relations'),sbCnt('derived_edges'),
-  ]);
-  document.getElementById('sg').innerHTML=[['Thoughts',tc,'#16a34a'],['Projects',pc,'#2563eb'],['People',pec,'#dc2626'],['Ideas',ic,'#d97706'],['Companies',cc,'#8b5cf6'],['Relaties',rc,'#7c3aed']]
-    .map(([l,v,c])=>`<div class="sc"><div class="scl">${l}</div><div class="scv">${v.toLocaleString('nl-NL')}</div><div class="scb" style="background:${c}"></div></div>`).join('');
-  if(!lr.length){document.getElementById('lr').textContent='Nog geen run';return;}
-  const lat=lr[0].run_at;
-  const items=lr.filter(l=>l.run_at===lat).sort((a,b)=>({high:0,medium:1,low:2,info:3}[a.severity]-{high:0,medium:1,low:2,info:3}[b.severity]));
-  document.getElementById('lr').textContent=new Date(lat).toLocaleString('nl-NL');
-  const hi=items.filter(i=>i.severity==='high').length,mi=items.filter(i=>i.severity==='medium').length;
-  document.getElementById('lbg').innerHTML=(hi?`<div class="bg bgh"><div class="bd" style="background:#ef4444"></div>${hi} hoog</div>`:'')+( mi?`<div class="bg bgm"><div class="bd" style="background:#f59e0b"></div>${mi} medium</div>`:'');
-  document.getElementById('ll').innerHTML=items.map(i=>`<div class="litem ${i.severity}"><div class="ldot"></div><div class="lb"><div class="lt"><span class="llab">${i.label}</span><span class="lcnt">${(i.count||0).toLocaleString('nl-NL')}</span></div><div class="ldesc">${i.description||''}</div></div></div>`).join('');
+  try{
+    const [lr,tc,pc,pec,ic,rc,dc,cc]=await Promise.all([
+      sbGet('brain_lint_results','?order=run_at.desc&limit=30'),
+      sbCnt('thoughts'),sbCnt('projects'),sbCnt('people'),sbCnt('ideas'),
+      sbCnt('relations'),sbCnt('derived_edges'),sbCnt('companies'),
+    ]);
+    document.getElementById('sg').innerHTML=[['Thoughts',tc,'#16a34a'],['Projects',pc,'#2563eb'],['People',pec,'#dc2626'],['Ideas',ic,'#d97706'],['Companies',cc,'#8b5cf6'],['Relaties',rc,'#7c3aed']]
+      .map(([l,v,c])=>`<div class="sc"><div class="scl">${l}</div><div class="scv">${(v||0).toLocaleString('nl-NL')}</div><div class="scb" style="background:${c}"></div></div>`).join('');
+    if(!lr.length){document.getElementById('lr').textContent='Nog geen run';document.getElementById('ll').textContent='';return;}
+    const lat=lr[0].run_at;
+    const items=lr.filter(l=>l.run_at===lat).sort((a,b)=>({high:0,medium:1,low:2,info:3}[a.severity]-{high:0,medium:1,low:2,info:3}[b.severity]));
+    document.getElementById('lr').textContent=new Date(lat).toLocaleString('nl-NL');
+    const hi=items.filter(i=>i.severity==='high').length,mi=items.filter(i=>i.severity==='medium').length;
+    document.getElementById('lbg').innerHTML=(hi?`<div class="bg bgh"><div class="bd" style="background:#ef4444"></div>${hi} hoog</div>`:'')+( mi?`<div class="bg bgm"><div class="bd" style="background:#f59e0b"></div>${mi} medium</div>`:'');
+    document.getElementById('ll').innerHTML=items.map(i=>`<div class="litem ${i.severity}"><div class="ldot"></div><div class="lb"><div class="lt"><span class="llab">${i.label}</span><span class="lcnt">${(i.count||0).toLocaleString('nl-NL')}</span></div><div class="ldesc">${i.description||''}</div></div></div>`).join('');
+  }catch(e){
+    hl=false;
+    document.getElementById('lr').textContent='Fout: '+e.message;
+    document.getElementById('ll').textContent='';
+  }
 }
 loadGraph();
 </script>
